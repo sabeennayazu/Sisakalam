@@ -12,10 +12,11 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("sisakalam_token");
+    const user = localStorage.getItem("sisakalam_user");
 
-    if (!token) {
-      router.push("/login");
+    if (!user) {
+      router.push("/home");
+      setLoading(false); // important!!
     } else {
       setLoading(false);
     }

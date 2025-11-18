@@ -1,27 +1,32 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import Link from "next/link";
+import LoginModal from "@/components/LoginModal"; // <-- ADD THIS IMPORT
 
 export default function LandingPage() {
+  const [loginOpen, setLoginOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-[#F9F5EE] text-[#191919]">
+    <div className="min-h-screen bg-[#F9F5EE] text-[#191919] relative">
       {/* NAVBAR */}
       <header className="w-full border-b border-black/10">
         <div className="mx-auto max-w-7xl p-5 flex justify-between items-center">
           <div className="flex flex-col">
-          <Link href={"/"}>
-          <h1 className="text-4xl font-serif font-bold">Sisakalam</h1>
-          <p className="text-sm">Waves of stories for all minds.</p>
-          </Link>
+            <Link href={"/"}>
+              <h1 className="text-4xl font-serif font-bold">Sisakalam</h1>
+              <p className="text-sm">Waves of stories for all minds.</p>
+            </Link>
           </div>
 
           <nav className="flex items-center gap-6 text-sm">
             <a href="/story" className="hover:underline">Our story</a>
-            <a href="#" className="hover:underline">Write</a>
-            <a href="#" className="hover:underline">Sign in</a>
 
-            <button className="px-4 py-2 rounded-full bg-black text-white hover:bg-gray-900">
+            <button
+              onClick={() => setLoginOpen(true)}
+              className="px-4 py-2 rounded-full bg-black text-white hover:bg-gray-900"
+            >
               Get started
             </button>
           </nav>
@@ -37,23 +42,25 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-lg text-gray-700 mb-8">
-           Discover stories. Create your own.express yourself, expand your mind.
+            Discover stories. Create your own. Express yourself, expand your mind.
           </p>
 
-          <button className="w-40 px-4 py-3 rounded-full bg-black text-white hover:bg-gray-900 text-lg">
+          <button
+            onClick={() => setLoginOpen(true)}
+            className="w-40 px-4 py-3 rounded-full bg-black text-white hover:bg-gray-900 text-lg"
+          >
             Start reading
           </button>
         </div>
 
         {/* RIGHT ARTWORK */}
         <div className="relative flex justify-center items-center">
-          {/* Replace the image below with your provided green artwork */}
           <Image
-            src="/images/books.png"              // Put your image in /public folder
+            src="/images/books.png"
             alt="Artwork"
             width={500}
             height={500}
-            className="object-contain "
+            className="object-contain"
           />
         </div>
       </section>
@@ -61,11 +68,14 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer className="border-t border-black/10 py-6 text-sm text-gray-600">
         <div className="mx-auto w-full flex pr-4 justify-end">
-         <p className="text-sm font-sans">
-          Created by: <a href="/">Sabeen Nayazu</a>
+          <p className="text-sm font-sans">
+            Created by: <a href="/">Sabeen Nayazu</a>
           </p>
         </div>
       </footer>
+
+      {/* LOGIN POPUP */}
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>
   );
 }

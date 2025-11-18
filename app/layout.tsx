@@ -8,7 +8,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata = {
-  title: "Medium Landing Clone",
+  title: "Sisakalam-world for words",
 };
 
 export default function RootLayout({
