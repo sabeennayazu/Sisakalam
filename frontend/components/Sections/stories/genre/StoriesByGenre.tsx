@@ -1,15 +1,149 @@
+"use client";
+
+import { useRef } from "react";
+import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
+
+const stories = [
+  {
+    id: 1,
+    title: "My Fake Boyfriend",
+    author: "S.A.A",
+    genre: "love triangle",
+    views: "100M",
+    image: "/images/covers/cover1.jpg",
+  },
+  {
+    id: 2,
+    title: "Scars of Alera",
+    author: "CloudWithStories",
+    genre: "royalty",
+    views: "1.1M",
+    image: "/images/covers/cover2.jpg",
+  },
+  {
+    id: 3,
+    title: "Torment",
+    author: "Rhea Novak",
+    genre: "erotic",
+    views: "17.7M",
+    image: "/images/covers/cover3.jpg",
+  },
+  {
+    id: 4,
+    title: "The Taste of It",
+    author: "Savanna Rose",
+    genre: "smut",
+    views: "14.7M",
+    image: "/images/covers/cover4.jpg",
+  },
+  {
+    id: 5,
+    title: "You're my life",
+    author: "Lily Adams",
+    genre: "heartbreak",
+    views: "8.3M",
+    image: "/images/covers/cover5.jpg",
+  },
+  {
+    id: 6,
+    title: "Costantino",
+    author: "AlphaLover",
+    genre: "family",
+    views: "5.6M",
+    image: "/images/covers/cover6.jpg",
+  },
+  {
+    id: 7,
+    title: "His Angel",
+    author: "MafiaLover",
+    genre: "mafia",
+    views: "12.4M",
+    image: "/images/covers/cover7.jpg",
+  },
+];
+
 export default function StoriesByGenre() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: "left" | "right") => {
+    if (!scrollRef.current) return;
+    const scrollAmount = 300;
+    scrollRef.current.scrollBy({
+      left: direction === "right" ? scrollAmount : -scrollAmount,
+      behavior: "smooth",
+    });
+  };
+
   return (
-    <section className="py-12 px-8">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold mb-8">Stories by Genre</h2>
+    <section className="py-8 md:py-12 lg:py-14 px-4 md:px-6 lg:px-8 bg-white">
+      <div className="max-w-7xl mx-auto relative">
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((item) => (
-            <div key={item} className="bg-gray-100 rounded-lg p-4 hover:shadow-lg transition">
-              <div className="w-full h-40 bg-gray-300 rounded mb-4"></div>
-              <h3 className="font-semibold mb-2">Genre Story {item}</h3>
-              <p className="text-sm text-gray-600">Explore stories in this genre</p>
+        {/* Title */}
+        <h2 className="text-xl md:text-2xl lg:text-3xl text-black font-semibold mb-6 md:mb-8">
+          Stories by Genre
+        </h2>
+
+        {/* Slider Buttons */}
+        <button
+          onClick={() => scroll("left")}
+          className="hidden md:flex absolute -left-2 md:-left-4 lg:-left-5 top-1/2 -translate-y-1/2 
+                     bg-white shadow-md rounded-full p-1 md:p-2 
+                     hover:shadow-lg transition z-10 text-black border-gray-500"
+        >
+          <ChevronLeft size={18} />
+        </button>
+
+        <button
+          onClick={() => scroll("right")}
+          className="hidden md:flex absolute -right-2 md:-right-4 lg:-right-5 top-1/2 -translate-y-1/2 
+                     bg-white shadow-md rounded-full p-1 md:p-2 
+                     hover:shadow-lg transition z-10 text-black border-gray-500"
+        >
+          <ChevronRight size={18} />
+        </button>
+
+        {/* Scroll Container */}
+        <div
+          ref={scrollRef}
+          className="flex gap-3 md:gap-4 lg:gap-6 overflow-x-auto scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        >
+          {stories.map((story) => (
+            <div
+              key={story.id}
+              className="min-w-[150px] md:min-w-[180px] lg:min-w-[200px] group cursor-pointer"
+            >
+              {/* Cover */}
+              <div className="relative overflow-hidden rounded-lg md:rounded-xl">
+                <img
+                  src={story.image}
+                  alt={story.title}
+                  className="w-full h-48 md:h-56 lg:h-72 object-cover 
+                             group-hover:scale-105 transition duration-300"
+                />
+              </div>
+
+              {/* Genre */}
+              <div className="mt-2 md:mt-3">
+                <span className="text-xs px-2 md:px-3 py-0.5 md:py-1 bg-gray-100 rounded-full text-gray-700">
+                  {story.genre}
+                </span>
+              </div>
+
+              {/* Title */}
+              <h3 className="mt-2 font-semibold text-xs md:text-sm text-black group-hover:text-black line-clamp-2">
+                {story.title}
+              </h3>
+
+              {/* Author */}
+              <p className="text-xs text-gray-500 line-clamp-1">
+                 {story.author}
+              </p>
+
+              {/* Views */}
+              <div className="flex items-center gap-1 text-xs text-gray-500 mt-1.5 md:mt-2">
+                <Eye size={14} />
+                {story.views}
+              </div>
             </div>
           ))}
         </div>
