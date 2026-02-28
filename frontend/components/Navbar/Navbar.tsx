@@ -12,11 +12,13 @@ import {
   X,
   BookOpen,
   LayoutGrid,
+  LogOut,
 } from "lucide-react";
 
 import MegaMenu from "./MegaMenu";
 import BrowseMenu from "./BrowseMenu";
 import ProfileMenu from "./ProfileMenu";
+import { logout } from "@/utils/auth";
 
 export default function Navbar() {
   const [openMenu, setOpenMenu] = useState<"genre" | "browse" | "profile" | null>(null);
@@ -42,7 +44,7 @@ export default function Navbar() {
         className="fixed top-4 inset-x-0 z-50 flex justify-center px-4"
       >
         <div className="w-full max-w-6xl backdrop-blur-md bg-white/70 border border-gray-200/40 shadow-lg rounded-2xl px-6 py-3">
-          
+
           {/* DESKTOP */}
           <div className="hidden md:flex justify-between items-center">
 
@@ -94,7 +96,7 @@ export default function Navbar() {
                 Start Writing
               </button>
 
-              <Bell size={20} className="cursor-pointer text-black" strokeWidth={2}  />
+              <Bell size={20} className="cursor-pointer text-black" strokeWidth={2} />
 
               <div
                 onMouseEnter={() => setOpenMenu("profile")}
@@ -109,10 +111,10 @@ export default function Navbar() {
 
           {/* MOBILE */}
           <div className="flex md:hidden justify-between items-center">
-            
+
             {/* Logo */}
             <Link href="/" className="font-bold text-lg text-black flex items-center">
-              <PenLine size={18} className="mr-2 text-black" strokeWidth={2}  />
+              <PenLine size={18} className="mr-2 text-black" strokeWidth={2} />
               Sisakalam
             </Link>
 
@@ -132,23 +134,20 @@ export default function Navbar() {
 
       {/* MOBILE DRAWER */}
       <div
-        className={`fixed inset-0 z-50 transition ${
-          mobileOpen ? "visible" : "invisible"
-        }`}
+        className={`fixed inset-0 z-50 transition ${mobileOpen ? "visible" : "invisible"
+          }`}
       >
         {/* Overlay */}
         <div
-          className={`absolute inset-0 bg-black/40 transition-opacity ${
-            mobileOpen ? "opacity-100" : "opacity-0"
-          }`}
+          className={`absolute inset-0 bg-black/40 transition-opacity ${mobileOpen ? "opacity-100" : "opacity-0"
+            }`}
           onClick={() => setMobileOpen(false)}
         />
 
         {/* Drawer */}
         <div
-          className={`absolute right-0 top-0 h-full w-72 bg-white shadow-xl transform transition-transform duration-300 ${
-            mobileOpen ? "translate-x-0" : "translate-x-full"
-          }`}
+          className={`absolute right-0 top-0 h-full w-72 bg-white shadow-xl transform transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "translate-x-full"
+            }`}
         >
           <div className="flex justify-end items-center p-5 border-b">
             <X
@@ -177,7 +176,19 @@ export default function Navbar() {
 
             <div className="flex items-center gap-3 cursor-pointer">
               <User size={18} className="text-black" />
-             Profile
+              Profile
+            </div>
+
+            {/* Divider */}
+            <div className="my-2 h-px bg-gray-200"></div>
+
+            {/* Logout */}
+            <div
+              onClick={logout}
+              className="flex items-center gap-3 cursor-pointer text-red-500 hover:text-red-600"
+            >
+              <LogOut size={18} />
+              Logout
             </div>
 
           </div>

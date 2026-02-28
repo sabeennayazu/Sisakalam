@@ -1,4 +1,7 @@
+"use client";
+
 import { User, Settings, LogOut } from "lucide-react";
+import { logout } from "@/utils/auth";
 
 export default function ProfileMenu() {
   return (
@@ -31,7 +34,9 @@ export default function ProfileMenu() {
           <div className="my-2 h-px bg-gray-100"></div>
 
           {/* Logout */}
-          <div className="flex items-center gap-3 px-3 py-2 rounded-xl 
+          <div
+            onClick={logout}
+            className="flex items-center gap-3 px-3 py-2 rounded-xl 
                           cursor-pointer transition-all duration-200
                           hover:bg-red-100 hover:text-red-500 hover:scale-[1.02]">
             <LogOut size={16} strokeWidth={2} color="#EF4444" />

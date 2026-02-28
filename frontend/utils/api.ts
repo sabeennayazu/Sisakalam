@@ -115,3 +115,21 @@ export const refreshTokenApi = async () => {
 
   return handleResponse(response);
 };
+
+/**
+ * Calls the logout endpoint to blacklist the refresh token
+ */
+export const logoutApi = async () => {
+  const accessToken = getToken();
+  const refreshToken = localStorage.getItem("refresh_token");
+  if (!refreshToken) return;
+
+  await fetch(`${API_BASE_URL}/accounts/logout/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+    },
+    body: JSON.stringify({ refresh: refreshToken }),
+  });
+};

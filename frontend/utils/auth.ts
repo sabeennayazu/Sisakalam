@@ -1,4 +1,4 @@
-import { getToken, refreshTokenApi, clearTokens } from "./api";
+import { getToken, refreshTokenApi, clearTokens, logoutApi } from "./api";
 
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
@@ -15,11 +15,15 @@ export const getAuthHeaders = (): HeadersInit => {
   };
 };
 
-// Logout user
-export const logout = (): void => {
+// Logout user — blacklists refresh token on backend, then clears client state
+export const logout = async (): Promise<void> => {
+  try {
+    await logoutApi();
+  } catch {
+    // Even if the backend call fails, we still clear tokens locally
+  }
   clearTokens();
   if (typeof window !== "undefined") {
-    // You can add a redirect here if needed
     window.location.href = "/";
   }
 };
@@ -27,7 +31,7 @@ export const logout = (): void => {
 // Check token validity and refresh if needed
 export const ensureValidToken = async (): Promise<boolean> => {
   const token = getToken();
-  
+
   if (!token) {
     return false;
   }
