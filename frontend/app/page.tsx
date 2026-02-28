@@ -9,7 +9,7 @@ export default function LandingPage() {
   const [loginOpen, setLoginOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F9F5EE] text-[#191919] relative">
+    <div className="min-h-screen bg-white text-[#191919] relative">
       {/* NAVBAR */}
       <header className="w-full border-b border-black/10">
         <div className="mx-auto max-w-7xl p-5 flex justify-between items-center">

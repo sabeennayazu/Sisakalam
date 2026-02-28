@@ -144,7 +144,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
                 value={formData.username}
                 onChange={handleChange}
                 placeholder="johndoe"
-                className={`w-full px-4 py-3 rounded-xl border ${errors.username ? "border-red-500" : "border-gray-200"
+                className={`w-full px-4 py-3 text-black rounded-xl border ${errors.username ? "border-red-500" : "border-gray-200"
                   } focus:ring-2 focus:ring-black outline-none transition-all`}
               />
               <ErrorMessage message={errors.username} />
@@ -161,7 +161,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
               value={formData.email}
               onChange={handleChange}
               placeholder="you@example.com"
-              className={`w-full px-4 py-3 rounded-xl border ${errors.email ? "border-red-500" : "border-gray-200"
+              className={`w-full px-4 py-3 text-black rounded-xl border ${errors.email ? "border-red-500" : "border-gray-200"
                 } focus:ring-2 focus:ring-black outline-none transition-all`}
             />
             <ErrorMessage message={errors.email} />
@@ -177,7 +177,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
               value={formData.password}
               onChange={handleChange}
               placeholder="••••••••"
-              className={`w-full px-4 py-3 rounded-xl border ${errors.password ? "border-red-500" : "border-gray-200"
+              className={`w-full px-4 py-3 text-black rounded-xl border ${errors.password ? "border-red-500" : "border-gray-200"
                 } focus:ring-2 focus:ring-black outline-none transition-all`}
             />
             <ErrorMessage message={errors.password} />
@@ -194,7 +194,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className={`w-full px-4 py-3 rounded-xl border ${errors.confirmPassword ? "border-red-500" : "border-gray-200"
+                className={`w-full px-4 py-3 text-black rounded-xl border ${errors.confirmPassword ? "border-red-500" : "border-gray-200"
                   } focus:ring-2 focus:ring-black outline-none transition-all`}
               />
               <ErrorMessage message={errors.confirmPassword} />
