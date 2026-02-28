@@ -2,6 +2,7 @@
 
 import { User, Settings, LogOut } from "lucide-react";
 import { logout } from "@/utils/auth";
+import Link from "next/link";
 
 export default function ProfileMenu() {
   return (
@@ -15,23 +16,27 @@ export default function ProfileMenu() {
         <div className="p-2">
 
           {/* Profile */}
+          <Link href="/profile">  
           <div className="flex items-center gap-3 px-3 py-2 rounded-xl 
                           cursor-pointer transition-all duration-200
                           hover:bg-gray-300 hover:scale-[1.02]">
             <User size={16} strokeWidth={2.5} color="#000000" />
             <span className="text-sm text-black">Profile</span>
           </div>
+          </Link>
 
           {/* Settings */}
+          <Link href="/settings">
           <div className="flex items-center gap-3 px-3 py-2 rounded-xl 
                           cursor-pointer transition-all duration-200
                           hover:bg-gray-300 hover:scale-[1.02]">
             <Settings size={16} strokeWidth={2.5} color="#000000" />
             <span className="text-sm text-black">Settings</span>
           </div>
+                            </Link>
 
           {/* Divider */}
-          <div className="my-2 h-px bg-gray-100"></div>
+          <div className="my-2 h-px bg-gray-350"></div>
 
           {/* Logout */}
           <div

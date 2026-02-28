@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Heart, MessageCircle } from "lucide-react";
 
 const stories = [
   {
@@ -10,6 +10,8 @@ const stories = [
     author: "S.A.A",
     genre: "love triangle",
     views: "100M",
+    likes: "1.2K",
+    comments: "1.2K",
     image: "/images/covers/cover1.jpg",
   },
   {
@@ -18,6 +20,8 @@ const stories = [
     author: "CloudWithStories",
     genre: "royalty",
     views: "1.1M",
+    likes: "1.2K",
+    comments: "1.2K",
     image: "/images/covers/cover2.jpg",
   },
   {
@@ -26,6 +30,8 @@ const stories = [
     author: "Rhea Novak",
     genre: "erotic",
     views: "17.7M",
+    likes: "1.2K",
+    comments: "1.2K",
     image: "/images/covers/cover3.jpg",
   },
   {
@@ -34,6 +40,8 @@ const stories = [
     author: "Savanna Rose",
     genre: "smut",
     views: "14.7M",
+    likes: "1.2K",
+    comments: "1.2K",
     image: "/images/covers/cover4.jpg",
   },
   {
@@ -42,6 +50,8 @@ const stories = [
     author: "Lily Adams",
     genre: "heartbreak",
     views: "8.3M",
+    likes: "1.2K",
+    comments: "1.2K",
     image: "/images/covers/cover5.jpg",
   },
   {
@@ -49,7 +59,9 @@ const stories = [
     title: "Costantino",
     author: "AlphaLover",
     genre: "family",
-    views: "5.6M",
+    views: "5.6M", 
+    likes: "1.2K",
+    comments: "1.2K",
     image: "/images/covers/cover6.jpg",
   },
   {
@@ -58,6 +70,8 @@ const stories = [
     author: "MafiaLover",
     genre: "mafia",
     views: "12.4M",
+    likes: "1.2K",
+    comments: "1.2K",
     image: "/images/covers/cover7.jpg",
   },
 ];
@@ -140,9 +154,23 @@ export default function StoriesByGenre() {
               </p>
 
               {/* Views */}
-              <div className="flex items-center gap-1 text-xs text-gray-500 mt-1.5 md:mt-2">
+              <div className="flex items-center justify-between  text-xs text-gray-500 mt-1.5 md:mt-2">
+                <div>
+
                 <Eye size={14} />
                 {story.views}
+                </div>
+                <div className="flex flex-row space-x-4">
+                <div >
+                  <Heart size={14} />
+                  {story.likes}
+                </div>
+                <div>
+                  <MessageCircle size={14} />
+                  {story.comments} 
+                </div>
+                  
+                </div>
               </div>
             </div>
           ))}

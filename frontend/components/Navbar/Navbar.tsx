@@ -50,7 +50,7 @@ export default function Navbar() {
 
             {/* LEFT */}
             <div className="flex items-center gap-12">
-              <Link href="/" className="font-bold text-xl text-black flex items-center">
+              <Link href="/home" className="font-bold text-xl text-black flex items-center">
                 <PenLine size={18} className="mr-2" />
                 Sisakalam
               </Link>
@@ -113,7 +113,7 @@ export default function Navbar() {
           <div className="flex md:hidden justify-between items-center">
 
             {/* Logo */}
-            <Link href="/" className="font-bold text-lg text-black flex items-center">
+            <Link href="/home" className="font-bold text-lg text-black flex items-center">
               <PenLine size={18} className="mr-2 text-black" strokeWidth={2} />
               Sisakalam
             </Link>
