@@ -55,13 +55,13 @@ export default function Navbar() {
         {/* LEFT */}
         <div className="flex items-center gap-12">
 
-          <Link href="/" className="font-bold text-xl text-black">
+          <Link href="/" className="font-bold text-xl px-4 text-black">
             Sisakalam
           </Link>
 
           <div className="flex items-center gap-8">
             <Link
-              href="/"
+              href="/home"
               className="text-gray-700 text-sm hover:text-black transition"
             >
               Home
@@ -110,13 +110,14 @@ export default function Navbar() {
           <input
             placeholder="Search..."
             className="
-              border border-gray-200/60
+              border border-gray-300/60
               rounded-full
-              px-4 py-2
+              text-black
+              px-10 py-2
               text-sm
               bg-white/50
               focus:outline-none
-              focus:border-gray-300
+              focus:border-gray-500
               focus:bg-white/80
               transition
             "
@@ -138,8 +139,8 @@ export default function Navbar() {
           </button>
 
           <Bell
-            size={18}
-            strokeWidth={1.5}
+            size={22}
+            strokeWidth={2}
             className="text-gray-700 cursor-pointer hover:text-black transition"
           />
 
@@ -149,8 +150,8 @@ export default function Navbar() {
             className="relative cursor-pointer"
           >
             <User
-              size={18}
-              strokeWidth={1.5}
+              size={22}
+              strokeWidth={2}
               className="text-gray-700 hover:text-black transition"
             />
             {openMenu === "profile" && <ProfileMenu />}
