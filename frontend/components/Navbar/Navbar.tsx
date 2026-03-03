@@ -18,12 +18,31 @@ import {
 import MegaMenu from "./MegaMenu";
 import BrowseMenu from "./BrowseMenu";
 import ProfileMenu from "./ProfileMenu";
-import { logout } from "@/utils/auth";
+import { logout, isAuthenticated } from "@/utils/auth";
 
 export default function Navbar() {
   const [openMenu, setOpenMenu] = useState<"genre" | "browse" | "profile" | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isAuth, setIsAuth] = useState<boolean | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
+
+  /* Check authentication on mount and listen for changes */
+  useEffect(() => {
+    setIsAuth(isAuthenticated());
+
+    // Listen for custom auth change event
+    const handleAuthChange = () => {
+      setIsAuth(isAuthenticated());
+    };
+
+    window.addEventListener("authChange", handleAuthChange);
+    window.addEventListener("storage", handleAuthChange);
+    
+    return () => {
+      window.removeEventListener("authChange", handleAuthChange);
+      window.removeEventListener("storage", handleAuthChange);
+    };
+  }, []);
 
   /* Close desktop dropdown on outside click */
   useEffect(() => {
@@ -35,6 +54,10 @@ export default function Navbar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Don't render until we've checked authentication
+  if (isAuth === null) return null;
+  if (!isAuth) return null;
 
   return (
     <>

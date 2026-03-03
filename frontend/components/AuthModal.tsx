@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "./Modal";
 import ErrorMessage from "./ErrorMessage";
-import { loginApi, signupApi, setToken } from "@/utils/api";
+import { loginApi, signupApi } from "@/utils/api";
+import { setToken } from "@/utils/auth";
 
 interface AuthModalProps {
   open: boolean;

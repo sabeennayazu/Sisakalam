@@ -1,4 +1,17 @@
-import { getToken, refreshTokenApi, clearTokens, logoutApi } from "./api";
+import { getToken, refreshTokenApi, clearTokens, logoutApi, setToken as setTokenApi } from "./api";
+
+// Dispatch custom event when auth state changes
+const dispatchAuthChange = () => {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("authChange"));
+  }
+};
+
+// Wrapper to set token and dispatch auth change event
+export const setToken = (accessToken: string, refreshToken: string): void => {
+  setTokenApi(accessToken, refreshToken);
+  dispatchAuthChange();
+};
 
 // Check if user is authenticated
 export const isAuthenticated = (): boolean => {
@@ -23,6 +36,7 @@ export const logout = async (): Promise<void> => {
     // Even if the backend call fails, we still clear tokens locally
   }
   clearTokens();
+  dispatchAuthChange();
   if (typeof window !== "undefined") {
     window.location.href = "/";
   }
