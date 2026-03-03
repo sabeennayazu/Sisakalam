@@ -27,3 +27,7 @@ class Tags(models.Model):
     def __str__(self):
         return self.name
 
+class Author(models.Model):
+    name = models.CharField(max_length=100)
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE)
+    

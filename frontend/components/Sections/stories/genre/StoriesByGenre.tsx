@@ -1,7 +1,9 @@
 "use client";
 
 import { useRef } from "react";
-import { ChevronLeft, ChevronRight, Eye, Heart, MessageCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, MessageCircle } from "lucide-react";
+import LikeButton from "@/components/interactions/LikeButton";
+import BookmarkButton from "@/components/interactions/BookmarkButton";
 
 const stories = [
   {
@@ -10,7 +12,7 @@ const stories = [
     author: "S.A.A",
     genre: "love triangle",
     views: "100M",
-    likes: "1.2K",
+    likes: 1200,
     comments: "1.2K",
     image: "/images/covers/cover1.jpg",
   },
@@ -20,7 +22,7 @@ const stories = [
     author: "CloudWithStories",
     genre: "royalty",
     views: "1.1M",
-    likes: "1.2K",
+    likes: 1200,
     comments: "1.2K",
     image: "/images/covers/cover2.jpg",
   },
@@ -30,7 +32,7 @@ const stories = [
     author: "Rhea Novak",
     genre: "erotic",
     views: "17.7M",
-    likes: "1.2K",
+    likes: 1200,
     comments: "1.2K",
     image: "/images/covers/cover3.jpg",
   },
@@ -40,7 +42,7 @@ const stories = [
     author: "Savanna Rose",
     genre: "smut",
     views: "14.7M",
-    likes: "1.2K",
+    likes: 1200,
     comments: "1.2K",
     image: "/images/covers/cover4.jpg",
   },
@@ -50,7 +52,7 @@ const stories = [
     author: "Lily Adams",
     genre: "heartbreak",
     views: "8.3M",
-    likes: "1.2K",
+    likes: 1200,
     comments: "1.2K",
     image: "/images/covers/cover5.jpg",
   },
@@ -59,8 +61,8 @@ const stories = [
     title: "Costantino",
     author: "AlphaLover",
     genre: "family",
-    views: "5.6M", 
-    likes: "1.2K",
+    views: "5.6M",
+    likes: 1200,
     comments: "1.2K",
     image: "/images/covers/cover6.jpg",
   },
@@ -70,7 +72,7 @@ const stories = [
     author: "MafiaLover",
     genre: "mafia",
     views: "12.4M",
-    likes: "1.2K",
+    likes: 1200,
     comments: "1.2K",
     image: "/images/covers/cover7.jpg",
   },
@@ -91,7 +93,7 @@ export default function StoriesByGenre() {
   return (
     <section className="py-8 md:py-12 lg:py-14 px-4 md:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto relative">
-        
+
         {/* Title */}
         <h2 className="text-xl md:text-2xl lg:text-3xl text-black font-semibold mb-6 md:mb-8">
           Stories by Genre
@@ -100,8 +102,8 @@ export default function StoriesByGenre() {
         {/* Slider Buttons */}
         <button
           onClick={() => scroll("left")}
-          className="hidden md:flex absolute -left-2 md:-left-4 lg:-left-5 top-1/2 -translate-y-1/2 
-                     bg-white shadow-md rounded-full p-1 md:p-2 
+          className="hidden md:flex absolute -left-2 md:-left-4 lg:-left-5 top-1/2 -translate-y-1/2
+                     bg-white shadow-md rounded-full p-1 md:p-2
                      hover:shadow-lg transition z-10 text-black border-gray-500"
         >
           <ChevronLeft size={18} />
@@ -109,8 +111,8 @@ export default function StoriesByGenre() {
 
         <button
           onClick={() => scroll("right")}
-          className="hidden md:flex absolute -right-2 md:-right-4 lg:-right-5 top-1/2 -translate-y-1/2 
-                     bg-white shadow-md rounded-full p-1 md:p-2 
+          className="hidden md:flex absolute -right-2 md:-right-4 lg:-right-5 top-1/2 -translate-y-1/2
+                     bg-white shadow-md rounded-full p-1 md:p-2
                      hover:shadow-lg transition z-10 text-black border-gray-500"
         >
           <ChevronRight size={18} />
@@ -131,9 +133,13 @@ export default function StoriesByGenre() {
                 <img
                   src={story.image}
                   alt={story.title}
-                  className="w-full h-48 md:h-56 lg:h-72 object-cover 
+                  className="w-full h-48 md:h-56 lg:h-72 object-cover
                              group-hover:scale-105 transition duration-300"
                 />
+                {/* Bookmark Button - Top Right */}
+                <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-black/20  rounded-full p-1.5 md:p-2 shadow-md hover:shadow-lg transition">
+                  <BookmarkButton storyId={story.id} />
+                </div>
               </div>
 
               {/* Genre */}
@@ -153,23 +159,21 @@ export default function StoriesByGenre() {
                  {story.author}
               </p>
 
-              {/* Views */}
-              <div className="flex items-center justify-between  text-xs text-gray-500 mt-1.5 md:mt-2">
-                <div>
-
-                <Eye size={14} />
-                {story.views}
+              {/* Views and Interactions */}
+              <div className="flex items-center justify-between text-xs text-gray-500 mt-1.5 md:mt-2">
+                <div className="flex items-center gap-1">
+                  <Eye size={14} />
+                  {story.views}
                 </div>
-                <div className="flex flex-row space-x-4">
-                <div >
-                  <Heart size={14} />
-                  {story.likes}
-                </div>
-                <div>
-                  <MessageCircle size={14} />
-                  {story.comments} 
-                </div>
-                  
+                <div className="flex flex-row gap-3">
+                  <LikeButton
+                    storyId={story.id}
+                    initialLikes={story.likes}
+                  />
+                  <div className="flex items-center gap-1">
+                    <MessageCircle size={14} />
+                    {story.comments}
+                  </div>
                 </div>
               </div>
             </div>

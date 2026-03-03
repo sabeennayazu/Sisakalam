@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight, Eye ,Heart, MessageCircle } from "lucide-react";
+import BookmarkButton from "@/components/interactions/BookmarkButton";
 
 const poems = [
   {
@@ -124,6 +125,10 @@ export default function PoemsByGenre() {
                   className="w-full h-48 md:h-56 lg:h-72 object-cover 
                              group-hover:scale-105 transition duration-300"
                 />
+                {/* Bookmark Button - Top Right */}
+                <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-black/20  rounded-full p-1.5 md:p-2 shadow-md hover:shadow-lg transition">
+                  <BookmarkButton storyId={poem.id} />
+                </div>
               </div>
 
               {/* Genre */}
