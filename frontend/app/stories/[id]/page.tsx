@@ -4,6 +4,9 @@ import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+import { extractImageColors } from "@/lib/extractImageColors";
+import DynamicBlobBackground from "@/components/ui/DynamicBlobBackground";
+
 import { mockStories } from "../mockData";
 
 import LatestUpdates from "@/components/Stories/LatestUpdates";
@@ -22,11 +25,14 @@ export default function StoryPage({ params }: StoryPageProps) {
   const [paramsResolved, setParamsResolved] = useState(false);
   const [id, setId] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] =
-    useState<TabType>("synopsis");
+  const [activeTab, setActiveTab] = useState<TabType>("synopsis");
+  const [selectedChapterId, setSelectedChapterId] = useState("");
 
-  const [selectedChapterId, setSelectedChapterId] =
-    useState("");
+  const [heroColors, setHeroColors] = useState({
+    dominant: "#1f2937",
+    secondary: "#111827",
+    glow: "#374151",
+  });
 
   /* ================= PARAM RESOLVE ================= */
 
@@ -39,18 +45,29 @@ export default function StoryPage({ params }: StoryPageProps) {
 
   const story = mockStories[id || ""];
 
+  /* ================= EXTRACT COVER COLORS ================= */
+
+  useEffect(() => {
+    if (!story?.image) return;
+
+    async function loadColors() {
+      const colors = await extractImageColors(story.image);
+      setHeroColors(colors);
+    }
+
+    loadColors();
+  }, [story]);
+
   /* ================= CURRENT CHAPTER ================= */
 
   const currentChapter = useMemo(() => {
     if (!story) return null;
 
-    if (!selectedChapterId)
-      return story.chapters[0];
+    if (!selectedChapterId) return story.chapters[0];
 
     return (
-      story.chapters.find(
-        (c) => c.chapter_id === selectedChapterId
-      ) || story.chapters[0]
+      story.chapters.find((c) => c.chapter_id === selectedChapterId) ||
+      story.chapters[0]
     );
   }, [selectedChapterId, story]);
 
@@ -64,9 +81,7 @@ export default function StoryPage({ params }: StoryPageProps) {
       .reverse()
       .map((ch) => ({
         title: `Chapter ${ch.chapter_number}: ${ch.chapter_title}`,
-        date: new Date(
-          ch.created_at
-        ).toLocaleDateString("en-US", {
+        date: new Date(ch.created_at).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
         }),
@@ -94,107 +109,171 @@ export default function StoryPage({ params }: StoryPageProps) {
 
       {/* ================= HERO ================= */}
 
-      <section className="relative overflow-hidden py-26 text-white">
+      <DynamicBlobBackground imageUrl={story.image}>
+        <section className="relative overflow-hidden py-26 text-white">
 
-        {/* Blurred Background from Cover */}
-        <Image
-          src={story.image}
-          alt=""
-          fill
-          priority
-          className="object-cover blur-3xl scale-125 opacity-40"
-          sizes="100vw"
-        />
+          {/* Dynamic Gradient Background */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(135deg, ${heroColors.dominant}, ${heroColors.secondary})`,
+            }}
+          />
 
-        {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-black/60" />
+          {/* Radial Glow */}
+          <div
+            className="absolute inset-0 opacity-70"
+            style={{
+              background: `radial-gradient(circle at 70% 30%, ${heroColors.glow}, transparent 60%)`,
+            }}
+          />
 
-        {/* Bottom Fade Into White */}
-        <div className="absolute bottom-0 w-full h-40 bg-gradient-to-b from-transparent to-white" />
+          {/* Blur Glow Effect */}
+          <div
+            className="absolute -top-40 -right-40 w-[700px] h-[700px] blur-[140px] rounded-full opacity-60"
+            style={{
+              background: heroColors.glow,
+            }}
+          />
 
-        {/* CONTENT */}
-        <div className="relative z-10 max-w-6xl mx-auto px-8">
+          {/* Blurred Cover Overlay */}
+          <Image
+            src={story.image}
+            alt=""
+            fill
+            priority
+            className="object-cover blur-3xl scale-125 opacity-30"
+            sizes="100vw"
+          />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Dark overlay */}
+          <div className="absolute inset-0 " />
 
-            {/* Cover */}
-            <div className="relative h-[480px] w-full max-w-xs rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/20">
-              <Image
-                src={story.image}
-                alt={story.title}
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
+          {/* Bottom fade */}
+          <div className="absolute bottom-0 w-full h-40 bg-linear-to-b from-transparent to-white" />
 
-            {/* Info */}
-            <div className="md:col-span-2">
+          {/* CONTENT */}
+          <div className="relative z-10 max-w-6xl mx-auto px-8">
 
-              <span className="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs">
-                {story.genre}
-              </span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
-              <h1 className="text-5xl font-bold mt-4 mb-3">
-                {story.title}
-              </h1>
-
-              <p className="text-white/80 mb-6">
-                by {story.author.name}
-              </p>
-
-              {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                {[
-                  ["Views", story.views],
-                  ["Likes", story.likes],
-                  ["Comments", story.comments],
-                  ["Bookmarks", story.bookmarks],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="bg-white/10 backdrop-blur-lg rounded-xl p-4"
-                  >
-                    <p className="text-xs text-white/70">
-                      {label}
-                    </p>
-                    <p className="text-2xl font-bold">
-                      {(Number(value) / 1000).toFixed(1)}K
-                    </p>
-                  </div>
-                ))}
+              {/* COVER */}
+              <div className="relative h-[450px] w-full max-w-xs rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/20">
+                <Image
+                  src={story.image}
+                  alt={story.title}
+                  fill
+                  className="object-cover"
+                  priority
+                />
               </div>
 
-              {/* Buttons */}
-              <div className="flex gap-4">
-                <button className="px-8 py-3 bg-black text-white rounded-full font-bold">
-                  Read Now
-                </button>
+              {/* INFO */}
+              <div className="md:col-span-2">
 
-                <button className="px-8 py-3 bg-white/20 backdrop-blur rounded-full">
-                  Add to Library
-                </button>
-              </div>
-
-              <div className="mt-6">
-                <span className="bg-orange-500 px-4 py-2 rounded-full text-xs font-bold">
-                  🔥 #1 POWER RANKING
+                <span className="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs">
+                  {story.genre}
                 </span>
-              </div>
 
+                <h1 className="text-5xl font-bold mt-4 mb-3">
+                  {story.title}
+                </h1>
+
+                <p className="text-white/80 mb-6">
+                  by {story.author.name}
+                </p>
+
+                {/* STATS */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                  {[
+                    ["Views", story.views],
+                    ["Likes", story.likes],
+                    ["Comments", story.comments],
+                    ["Bookmarks", story.bookmarks],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="bg-white/10 backdrop-blur-lg rounded-xl p-4"
+                    >
+                      <p className="text-xs text-white/70">
+                        {label}
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {(Number(value) / 1000).toFixed(1)}K
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* BUTTONS */}
+                <div className="flex gap-4">
+
+                  <button className="px-8 py-3 bg-black text-white rounded-full font-bold">
+                    Read Now
+                  </button>
+
+                  <button className="px-8 py-3 bg-white/20 backdrop-blur rounded-full">
+                    Add to Library
+                  </button>
+
+                </div>
+
+                <div className="mt-6">
+                  <span className="bg-orange-500 px-4 py-2 rounded-full text-xs font-bold">
+                    🔥 #1 POWER RANKING
+                  </span>
+                </div>
+
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </DynamicBlobBackground>
 
       {/* ================= MAIN CONTENT ================= */}
-
+        <section className="relative overflow-hidden">
       <div className="max-w-6xl mx-auto px-8 py-12">
+
+        {/* TAB NAVIGATION */}
+        <div className="mb-8 border-b border-gray-200">
+          <div className="flex gap-8">
+            <button
+              onClick={() => setActiveTab("synopsis")}
+              className={`pb-4 font-semibold text-lg transition-colors ${
+                activeTab === "synopsis"
+                  ? "text-black border-b-2 border-black"
+                  : "text-gray-500 hover:text-black"
+              }`}
+            >
+              Synopsis
+            </button>
+            <button
+              onClick={() => setActiveTab("contents")}
+              className={`pb-4 font-semibold text-lg transition-colors ${
+                activeTab === "contents"
+                  ? "text-black border-b-2 border-black"
+                  : "text-gray-500 hover:text-black"
+              }`}
+            >
+              Table of Contents
+            </button>
+            <button
+              onClick={() => setActiveTab("reviews")}
+              className={`pb-4 font-semibold text-lg transition-colors ${
+                activeTab === "reviews"
+                  ? "text-black border-b-2 border-black"
+                  : "text-gray-500 hover:text-black"
+              }`}
+            >
+              Reviews
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
 
           {/* LEFT */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 ">
 
             {activeTab === "synopsis" && (
               <SynopsisSection synopsis={story.synopsis} />
@@ -216,6 +295,7 @@ export default function StoryPage({ params }: StoryPageProps) {
                 averageRating={4.71}
               />
             )}
+
           </div>
 
           {/* RIGHT SIDEBAR */}
@@ -231,9 +311,7 @@ export default function StoryPage({ params }: StoryPageProps) {
 
             {/* TAGS */}
             <div className="bg-gray-50 rounded-lg p-6">
-              <h3 className="font-semibold mb-4">
-                TAGS
-              </h3>
+              <h3 className="font-semibold mb-4">TAGS</h3>
 
               <div className="flex flex-wrap gap-2">
                 {story.tags.map((tag) => (
@@ -252,6 +330,8 @@ export default function StoryPage({ params }: StoryPageProps) {
           </div>
         </div>
       </div>
+      </section>
+
     </div>
   );
 }
