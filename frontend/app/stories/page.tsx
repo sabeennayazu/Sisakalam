@@ -29,7 +29,7 @@ export default function StoriesPage() {
                 {/* Cover Image */}
                 <div className="relative h-64 bg-gray-200 rounded-lg overflow-hidden mb-4">
                   <Image
-                    src={story.cover_image}
+                    src={story.image}
                     alt={story.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"

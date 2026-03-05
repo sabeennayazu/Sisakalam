@@ -9,7 +9,7 @@ export interface Chapter {
 export interface Story {
   id: string;
   title: string;
-  cover_image: string;
+  image: string;
   author: {
     id: string;
     name: string;
@@ -30,17 +30,17 @@ export interface Story {
 export const mockStories: Record<string, Story> = {
   "1": {
     id: "1",
-    title: "The Last Horizon",
-    cover_image: "https://images.unsplash.com/photo-1507842217343-583f20270319?w=500&h=700&fit=crop",
+    title: "SOUL",
+    image: "/images/covers/cover13.jpg",
     author: {
       id: "user-1",
-      name: "Sarah Mitchell",
+      name: "Sabin Nayaju",
       profile_image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
     },
-    genre: "Science Fiction",
-    tags: ["space", "adventure", "dystopian", "future"],
+    genre: "Philosophical",
+    tags: ["self help", "personal development", "mindfulness", "spirituality"],
     synopsis:
-      "In a world where the sun is dying, humanity embarks on its greatest adventure. Follow Elena and her crew as they journey beyond the last horizon to find salvation for mankind.",
+      "SOUL is a transformative journey into the depths of human consciousness, exploring the intricate tapestry of our inner world. Through a blend of philosophical insights, personal anecdotes, and practical exercises, this book invites readers to embark on a quest for self-discovery and enlightenment. From understanding the nature of the soul to navigating the complexities of modern life, SOUL offers a roadmap for cultivating mindfulness, finding purpose, and embracing the interconnectedness of all beings. Whether you're seeking personal growth or a deeper connection to the universe, SOUL provides the tools and wisdom to awaken your true potential.",
     likes: 4521,
     comments: 342,
     views: 24568,
@@ -122,15 +122,15 @@ Either way, they had crossed a threshold. The future of the Horizon had just bec
 
   "2": {
     id: "2",
-    title: "Echoes of the Past",
-    cover_image: "https://images.unsplash.com/photo-1511379938547-c1f69b13d835?w=500&h=700&fit=crop",
+    title: "Ray of Hope",
+    image: "/images/covers/cover11.jpg",
     author: {
       id: "user-2",
       name: "James Chen",
       profile_image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
     },
-    genre: "Historical Fiction",
-    tags: ["history", "mystery", "time", "past"],
+    genre: "Fiction",
+    tags: ["dystopian", "future", "mystery", "time", "past"],
     synopsis:
       "A historian discovers a mysterious journal that reveals secrets about historical figures we thought we knew. As she uncovers the truth, she realizes history might have been written by the wrong people.",
     likes: 3218,
@@ -176,7 +176,7 @@ The bigger question was: who else knew about this journal? And why had it been h
   "3": {
     id: "3",
     title: "City of Shadows",
-    cover_image: "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=500&h=700&fit=crop",
+    image: "/images/covers/cover3.jpg",
     author: {
       id: "user-3",
       name: "Rachel Torres",
