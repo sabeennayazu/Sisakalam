@@ -171,11 +171,11 @@ export default function StoryPage({ params }: StoryPageProps) {
               {/* INFO */}
               <div className="md:col-span-2">
 
-                <span className="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs">
+                <span className="bg-white/10 backdrop-blur px-3 py-1 rounded-full border text-xs">
                   {story.genre}
                 </span>
 
-                <h1 className="text-5xl font-bold mt-4 mb-3">
+                <h1 className="text-5xl font-semibold mt-4 mb-3">
                   {story.title}
                 </h1>
 
@@ -212,16 +212,13 @@ export default function StoryPage({ params }: StoryPageProps) {
                     Read Now
                   </button>
 
-                  <button className="px-8 py-3 bg-white/20 backdrop-blur rounded-full">
+                  <button className="px-8 py-3 bg-white/10 backdrop-blur border rounded-full">
                     Add to Library
                   </button>
 
-                </div>
+                
 
-                <div className="mt-6">
-                  <span className="bg-orange-500 px-4 py-2 rounded-full text-xs font-bold">
-                    🔥 #1 POWER RANKING
-                  </span>
+               
                 </div>
 
               </div>

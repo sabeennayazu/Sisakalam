@@ -22,6 +22,9 @@ export default function LandingPage() {
 
           <nav className="flex items-center gap-6 text-sm">
             <a href="/story" className="hover:underline">Our story</a>
+            <Link href="/write" className="hover:underline">
+              Write
+            </Link>
 
             <button
               onClick={() => setLoginOpen(true)}
@@ -45,12 +48,20 @@ export default function LandingPage() {
             Discover stories. Create your own. Express yourself, expand your mind.
           </p>
 
-          <button
-            onClick={() => setLoginOpen(true)}
-            className="w-40 px-4 py-3 rounded-full bg-black text-white hover:bg-gray-900 text-lg"
-          >
-            Start reading
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setLoginOpen(true)}
+              className="px-6 py-3 rounded-full bg-black text-white hover:bg-gray-900 text-base font-medium"
+            >
+              Start reading
+            </button>
+            <Link
+              href="/write"
+              className="px-6 py-3 rounded-full border border-black text-black hover:bg-black hover:text-white text-base font-medium transition-colors"
+            >
+              Start writing
+            </Link>
+          </div>
         </div>
 
         {/* RIGHT ARTWORK */}

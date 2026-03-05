@@ -113,11 +113,12 @@ export default function Navbar() {
                 placeholder="Search..."
                 className="border border-gray-500 rounded-full px-10 py-2 text-sm text-gray-500"
               />
-
+              <Link href="/write" >
               <button className="px-5 py-2 rounded-full bg-black text-white text-sm flex items-center gap-2 cursor-pointer">
                 <Plus size={16} />
                 Start Writing
               </button>
+              </Link>
 
               <Bell size={20} className="cursor-pointer text-black" strokeWidth={2} />
 

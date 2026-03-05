@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import SignupModal from "@/components/SignupModal";
+import AuthModal from "@/components/AuthModal";
 
 export default function SignupPage() {
   const [signupOpen, setSignupOpen] = useState(true);
@@ -34,7 +34,7 @@ export default function SignupPage() {
       </header>
 
       {/* SIGNUP MODAL */}
-      <SignupModal open={signupOpen} onClose={() => setSignupOpen(false)} />
+      <AuthModal open={signupOpen} onClose={() => setSignupOpen(false)} />
     </div>
   );
 }

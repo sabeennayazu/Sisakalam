@@ -21,7 +21,7 @@ export const mockPoems: Record<string, Poem> = {
   "1": {
     id: "1",
     title: "Whispers in the Garden",
-    cover_image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=500&h=700&fit=crop",
+    cover_image: "/images/covers/cover9.jpg",
     author: {
       id: "poet-1",
       name: "Emma Rothschild",
