@@ -9,7 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')),
     path('api/interactions/', include('interactions.urls')),
-    # include other apps later
+    path('api/stories/', include('stories.urls')),
 ]
 
 # This part is IMPORTANT

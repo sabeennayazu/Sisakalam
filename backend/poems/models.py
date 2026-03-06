@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from stories.models import Genre, Tag
+from stories.models import Genre, Tags
 
 
 class PoemStatus(models.TextChoices):
@@ -27,7 +27,7 @@ class Poem(models.Model):
     )
 
     tags = models.ManyToManyField(
-        Tag,
+        Tags,
         related_name="poems",
         blank=True
     )

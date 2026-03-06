@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { WritingDraft, Phase } from "@/app/write/page";
 import GenreSelector from "./GenreSelector";
 import TagInput from "./TagInput";
+import { fetchGenres, Genre } from "@/utils/api";
 
 interface MetadataPhaseProps {
   draft: WritingDraft;
@@ -14,29 +15,6 @@ interface MetadataPhaseProps {
   onSaveDraft: () => void;
   isSaving: boolean;
 }
-
-const STORY_GENRES = [
-  "Fantasy",
-  "Science Fiction",
-  "Romance",
-  "Mystery",
-  "Thriller",
-  "Horror",
-  "Historical",
-  "Contemporary",
-  "Drama",
-  "Comedy",
-  "Adventure",
-];
-
-const POEM_GENRES = [
-  "Haiku",
-  "Free Verse",
-  "Sonnet",
-  "Narrative",
-  "Lyrical",
-  "Experimental",
-];
 
 export default function MetadataPhase({
   draft,
@@ -49,11 +27,40 @@ export default function MetadataPhase({
   const [coverPreview, setCoverPreview] = useState<string | null>(
     draft.coverImage
   );
+  const [genres, setGenres] = useState<string[]>([]);
+  const [genresLoading, setGenresLoading] = useState(false);
+  const [genresError, setGenresError] = useState<string | null>(null);
 
   const isStory = draft.type === "story";
   const isPoem = draft.type === "poem";
 
-  const genres = isStory ? STORY_GENRES : POEM_GENRES;
+  // Fetch genres from backend whenever content type changes
+  useEffect(() => {
+    if (!draft.type) return;
+
+    let cancelled = false;
+    setGenresLoading(true);
+    setGenresError(null);
+
+    fetchGenres(draft.type)
+      .then((data: Genre[]) => {
+        if (!cancelled) {
+          setGenres(data.map((g) => g.name));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGenresError("Failed to load genres. Please try again.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setGenresLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [draft.type]);
 
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -180,8 +187,18 @@ export default function MetadataPhase({
                 options={genres}
                 value={draft.genre}
                 onChange={(val) => onUpdateDraft({ genre: val })}
-                placeholder={isStory ? "Select a genre" : "Select a genre (optional)"}
+                placeholder={
+                  genresLoading
+                    ? "Loading genres..."
+                    : isStory
+                    ? "Select a genre"
+                    : "Select a genre (optional)"
+                }
+                disabled={genresLoading}
               />
+              {genresError && (
+                <p className="text-xs text-red-500 mt-2">{genresError}</p>
+              )}
             </div>
 
             {/* TAGS */}

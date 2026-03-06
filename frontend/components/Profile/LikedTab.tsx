@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
+import ProfileCard from "./ProfileCard";
 
 type ItemType = "story" | "poem";
 
@@ -9,6 +10,11 @@ interface LikedItem {
   id: number;
   title: string;
   author: string;
+  genre: string;
+  views: string;
+  likes: number;
+  comments: string;
+  image: string;
   type: ItemType;
   date: string;
 }
@@ -20,10 +26,10 @@ export default function LikedTab() {
   const [selected, setSelected] = useState<number[]>([]);
 
   const items: LikedItem[] = [
-    { id: 1, title: "Echoes of Silence", author: "Clara Thorne", type: "poem", date: "2025-02-01" },
-    { id: 2, title: "Hidden Path", author: "Arlo Finch", type: "story", date: "2025-01-12" },
-    { id: 3, title: "Melodies of May", author: "Elena Rousseau", type: "poem", date: "2024-12-21" },
-    { id: 4, title: "The Burning Road", author: "Rhea Novak", type: "story", date: "2024-11-08" }
+    { id: 1, title: "Echoes of Silence", author: "Clara Thorne", genre: "Romanticism", views: "45M", likes: 1200, comments: "1.2K", image: "/images/covers/cover1.jpg", type: "poem", date: "2025-02-01" },
+    { id: 2, title: "Hidden Path", author: "Arlo Finch", genre: "Mystery", views: "1.1M", likes: 800, comments: "400", image: "/images/covers/cover2.jpg", type: "story", date: "2025-01-12" },
+    { id: 3, title: "Melodies of May", author: "Elena Rousseau", genre: "Lyric", views: "33M", likes: 3000, comments: "2.1K", image: "/images/covers/cover5.jpg", type: "poem", date: "2024-12-21" },
+    { id: 4, title: "The Burning Road", author: "Rhea Novak", genre: "Action", views: "17.7M", likes: 1400, comments: "890", image: "/images/covers/cover3.jpg", type: "story", date: "2024-11-08" }
   ];
 
   const filtered = items
@@ -56,27 +62,7 @@ export default function LikedTab() {
     clearSelection();
   };
 
-  const Card = ({ item }: { item: LikedItem }) => (
-    <div className="relative">
-
-      {selectionMode && (
-        <input
-          type="checkbox"
-          checked={selected.includes(item.id)}
-          onChange={() => toggleSelect(item.id)}
-          className="absolute top-3 left-3 z-10"
-        />
-      )}
-
-      <div className="rounded-xl overflow-hidden bg-gray-100 h-72 mb-3"></div>
-
-      <p className="text-xs text-gray-500 capitalize">{item.type}</p>
-
-      <h3 className="font-serif text-sm text-black">{item.title}</h3>
-
-      <p className="text-xs text-gray-500">{item.author}</p>
-    </div>
-  );
+  // The internal Card function was fully removed since ProfileCard has selection support out-of-the-box.
 
   return (
     <div className="space-y-8 py-4">
@@ -90,7 +76,7 @@ export default function LikedTab() {
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="border text-sm px-3 py-2 rounded-md"
+            className="border text-sm text-black  px-3 py-2 rounded-md"
           >
             <option value="newest">Newest → Oldest</option>
             <option value="oldest">Oldest → Newest</option>
@@ -100,7 +86,7 @@ export default function LikedTab() {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as any)}
-            className="border text-sm px-3 py-2 rounded-md"
+            className="border text-sm text-black px-3 py-2 rounded-md"
           >
             <option value="all">All Content</option>
             <option value="story">Stories</option>
@@ -115,7 +101,7 @@ export default function LikedTab() {
           {!selectionMode && (
             <button
               onClick={() => setSelectionMode(true)}
-              className="text-sm border px-4 py-2 rounded-md hover:bg-gray-50"
+              className="text-sm text-black border px-4 py-2 rounded-md hover:bg-gray-50"
             >
               Select
             </button>
@@ -125,7 +111,7 @@ export default function LikedTab() {
             <>
               <button
                 onClick={selectAll}
-                className="text-sm border px-4 py-2 rounded-md"
+                className="text-sm text-black border px-4 py-2 rounded-md"
               >
                 Select All
               </button>
@@ -153,10 +139,25 @@ export default function LikedTab() {
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
 
         {filtered.map((item) => (
-          <Card key={item.id} item={item} />
+          <ProfileCard
+             key={item.id}
+             id={item.id}
+             title={item.title}
+             author={item.author}
+             genre={item.genre}
+             image={item.image}
+             views={item.views}
+             likes={item.likes}
+             comments={item.comments}
+             type={item.type}
+             selectionMode={selectionMode}
+             isSelected={selected.includes(item.id)}
+             onToggleSelect={toggleSelect}
+             showBookmark={false}
+          />
         ))}
 
       </div>

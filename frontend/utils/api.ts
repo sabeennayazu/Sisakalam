@@ -133,3 +133,25 @@ export const logoutApi = async () => {
     body: JSON.stringify({ refresh: refreshToken }),
   });
 };
+
+// --- Genre API ---
+
+export interface Genre {
+  id: number;
+  name: string;
+  type: "story" | "poem";
+}
+
+/**
+ * Fetches genres from the backend, optionally filtered by type.
+ */
+export const fetchGenres = async (
+  type?: "story" | "poem"
+): Promise<Genre[]> => {
+  const url = type
+    ? `${API_BASE_URL}/stories/genres/?type=${type}`
+    : `${API_BASE_URL}/stories/genres/`;
+
+  const response = await fetch(url);
+  return handleResponse(response);
+};

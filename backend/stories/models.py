@@ -2,18 +2,29 @@ from django.db import models
 from django.conf import settings
 
 
-class Tag(models.Model):
+class Tags(models.Model):
     name = models.CharField(max_length=50, unique=True, db_index=True)
 
     def __str__(self):
         return self.name
 
 
+class GenreType(models.TextChoices):
+    STORY = "story", "Story"
+    POEM = "poem", "Poem"
+
+
 class Genre(models.Model):
     name = models.CharField(max_length=50, unique=True)
+    type = models.CharField(
+        max_length=10,
+        choices=GenreType.choices,
+        default=GenreType.STORY,
+        db_index=True,
+    )
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.get_type_display()})"
 
 
 class StoryStatus(models.TextChoices):
@@ -42,7 +53,7 @@ class Story(models.Model):
     )
 
     tags = models.ManyToManyField(
-        Tag,
+        Tags,
         related_name="stories",
         blank=True
     )
