@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { WritingDraft, Phase } from "@/app/write/page";
+import GenreSelector from "./GenreSelector";
+import TagInput from "./TagInput";
 
 interface MetadataPhaseProps {
   draft: WritingDraft;
@@ -36,26 +38,6 @@ const POEM_GENRES = [
   "Experimental",
 ];
 
-const AVAILABLE_TAGS = [
-  "love",
-  "adventure",
-  "magic",
-  "dystopian",
-  "coming-of-age",
-  "family",
-  "friendship",
-  "mystery",
-  "action",
-  "emotional",
-  "inspirational",
-  "thought-provoking",
-  "dark",
-  "light",
-  "humor",
-  "drama",
-  "supernatural",
-];
-
 export default function MetadataPhase({
   draft,
   onUpdateDraft,
@@ -85,13 +67,6 @@ export default function MetadataPhase({
     }
   };
 
-  const handleTagToggle = (tag: string) => {
-    const newTags = draft.tags.includes(tag)
-      ? draft.tags.filter((t) => t !== tag)
-      : [...draft.tags, tag];
-    onUpdateDraft({ tags: newTags });
-  };
-
   const canPublish = isStory ? draft.genre && draft.type : draft.type;
 
   return (
@@ -107,7 +82,7 @@ export default function MetadataPhase({
           {/* LEFT COLUMN - COVER & PREVIEW */}
           <div className="md:col-span-1">
             {/* COVER IMAGE */}
-            {isStory && (
+            
               <div className="mb-8">
                 <h3 className="text-sm font-semibold text-gray-900 mb-4">
                   Cover Image
@@ -137,7 +112,7 @@ export default function MetadataPhase({
                   Choose Image
                 </button>
               </div>
-            )}
+            
 
             {/* QUICK PREVIEW */}
             <div className="bg-white rounded-xl p-6 border border-gray-200">
@@ -201,67 +176,45 @@ export default function MetadataPhase({
               <label className="block text-sm font-semibold text-gray-900 mb-3">
                 Genre {isStory && <span className="text-red-500">*</span>}
               </label>
-              <select
+              <GenreSelector
+                options={genres}
                 value={draft.genre}
-                onChange={(e) => onUpdateDraft({ genre: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black bg-white text-gray-900"
-              >
-                <option value="">
-                  {isStory ? "Select a genre" : "Select a genre (optional)"}
-                </option>
-                {genres.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => onUpdateDraft({ genre: val })}
+                placeholder={isStory ? "Select a genre" : "Select a genre (optional)"}
+              />
             </div>
 
             {/* TAGS */}
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-3">
-                Tags (select up to 5)
+                Tags (up to 8)
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                {AVAILABLE_TAGS.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => handleTagToggle(tag)}
-                    className={`px-4 py-3 rounded-lg text-sm font-medium transition-all text-center ${
-                      draft.tags.includes(tag)
-                        ? "bg-black text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    } ${draft.tags.length >= 5 && !draft.tags.includes(tag) ? "opacity-50 cursor-not-allowed" : ""}`}
-                    disabled={
-                      draft.tags.length >= 5 && !draft.tags.includes(tag)
-                    }
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
+              <TagInput
+                tags={draft.tags}
+                onChange={(tags) => onUpdateDraft({ tags })}
+                maxTags={8}
+                placeholder="Type a tag and press Enter..."
+              />
             </div>
 
-            {/* SYNOPSIS (OPTIONAL FOR POEMS) */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-3">
-                Synopsis {!isStory && <span className="text-gray-500">(optional)</span>}
-              </label>
-              <textarea
-                value={draft.synopsis}
-                onChange={(e) => onUpdateDraft({ synopsis: e.target.value })}
-                placeholder={
-                  isStory
-                    ? "Write a compelling synopsis (200-500 words recommended)"
-                    : "Write a brief description of your poem (optional)"
-                }
-                rows={5}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black text-gray-900 placeholder-gray-500 resize-none"
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                {draft.synopsis.length} characters
-              </p>
-            </div>
+            {/* SYNOPSIS (ONLY FOR STORIES) */}
+            {isStory && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  Synopsis
+                </label>
+                <textarea
+                  value={draft.synopsis}
+                  onChange={(e) => onUpdateDraft({ synopsis: e.target.value })}
+                  placeholder="Write a compelling synopsis (200-500 words recommended)"
+                  rows={5}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black text-gray-900 placeholder-gray-500 resize-none"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  {draft.synopsis.length} characters
+                </p>
+              </div>
+            )}
 
             {/* MATURE CONTENT */}
             <div>

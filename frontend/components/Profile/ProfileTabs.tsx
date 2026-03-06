@@ -5,9 +5,9 @@ import WorksTab from "./WorksTab";
 import PoemsTab from "./PoemsTab";
 import StoriesTab from "./StoriesTab";
 import SavedTab from "./SavedTab";
-import AboutTab from "./AboutTab";
+import LikedTab from "./LikedTab";
 
-const tabs = ["Works", "Poems", "Stories", "Saved", "About"];
+const tabs = ["Works", "Poems", "Stories", "Saved", "Liked", ];
 
 export default function ProfileTabs() {
     const [activeTab, setActiveTab] = useState("Works");
@@ -42,7 +42,7 @@ export default function ProfileTabs() {
                 {activeTab === "Poems" && <PoemsTab />}
                 {activeTab === "Stories" && <StoriesTab />}
                 {activeTab === "Saved" && <SavedTab />}
-                {activeTab === "About" && <AboutTab />}
+                {activeTab === "Liked" && <LikedTab />}
             </div>
         </div>
     );
