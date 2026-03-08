@@ -1,6 +1,6 @@
 "use client";
 
-import ProfileCard from "./ProfileCard";
+import UniversalCard from "@/components/shared/UniversalCard";
 
 const savedItems = [
     { id: 1, title: "The Art of Doing Nothing", author: "William Reyes", type: "essay", genre: "Lifestyle", views: "1.2M", likes: 800, comments: "200", time: "Saved 2 days ago", image: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" },
@@ -16,14 +16,14 @@ const savedItems = [
 export default function SavedTab() {
     return (
         <div>
-            <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-2">
+            <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-3">
                 <h2 className="font-serif font-bold text-xl text-black">Reading List</h2>
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{savedItems.length} Items</span>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 lg:gap-8">
                 {savedItems.map((item) => (
-                    <ProfileCard
+                    <UniversalCard
                         key={item.id}
                         id={item.id}
                         title={item.title}

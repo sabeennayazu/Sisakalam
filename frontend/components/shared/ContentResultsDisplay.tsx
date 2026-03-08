@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import AuthGuard from "@/components/AuthGuard";
-import { Eye, MessageCircle, Filter, ArrowUpDown } from "lucide-react";
-import LikeButton from "@/components/interactions/LikeButton";
-import BookmarkButton from "@/components/interactions/BookmarkButton";
+import { Filter } from "lucide-react";
+import UniversalCard from "@/components/shared/UniversalCard";
 import RecommendedContent from "@/components/shared/RecommendedContent";
 
 // --- MOCK DATA ---
@@ -80,7 +79,7 @@ export default function ContentResultsDisplay({ title, label }: ContentResultsDi
               </div>
 
               {/* Tabs */}
-              <div className="flex gap-8 mb-8 border-b border-gray-300">
+              <div className="flex gap-8 mb-12 border-b border-gray-300">
                 <button
                   onClick={() => setActiveTab("STORIES")}
                   className={`pb-3 text-sm font-bold tracking-widest uppercase transition ${
@@ -109,45 +108,20 @@ export default function ContentResultsDisplay({ title, label }: ContentResultsDi
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
                 </div>
               ) : mainData.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 lg:gap-8">
                   {mainData.map((item) => (
-                    <div key={item.id} className="group cursor-pointer">
-                      {/* Cover */}
-                      <div className="relative overflow-hidden mb-3 md:mb-4 bg-gray-100 aspect-[3/4]">
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                        />
-                        {/* Bookmark Button - Top Right */}
-                        <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-black/20 rounded-full p-1.5 md:p-2 shadow-md hover:shadow-lg transition">
-                          <BookmarkButton storyId={item.id} />
-                        </div>
-                      </div>
-
-                      {/* Title */}
-                      <h3 className="font-bold text-sm text-black group-hover:text-black line-clamp-2 uppercase">
-                        {item.title}
-                      </h3>
-
-                      {/* Author */}
-                      <p className="text-xs text-gray-500 line-clamp-1 italic mt-1">
-                        {item.author}
-                      </p>
-
-                      {/* Interactions */}
-                      <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
-                         <LikeButton storyId={item.id} initialLikes={item.likes} />
-                         <div className="flex items-center gap-1">
-                           <MessageCircle size={14} className="text-gray-400" />
-                           {item.comments}
-                         </div>
-                         <div className="flex items-center gap-1">
-                           <Eye size={14} className="text-gray-400" />
-                           {item.views}
-                         </div>
-                      </div>
-                    </div>
+                    <UniversalCard
+                      key={item.id}
+                      id={item.id}
+                      title={item.title}
+                      author={item.author}
+                      genre=""
+                      image={item.image}
+                      views={item.views}
+                      likes={item.likes}
+                      comments={item.comments}
+                      showBookmark={true}
+                    />
                   ))}
                 </div>
               ) : (
@@ -168,7 +142,7 @@ export default function ContentResultsDisplay({ title, label }: ContentResultsDi
             </div>
 
             {/* Right Column - Sidebar (Approx 25%) */}
-            <div className="w-full lg:w-72 flex-shrink-0 mt-12 lg:mt-0">
+            <div className="w-full lg:w-72 shrink-0 mt-12 lg:mt-0">
               
               {/* Recommended For You Section */}
               <RecommendedContent 

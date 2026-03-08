@@ -1,6 +1,6 @@
 "use client";
 
-import LibraryCard from "./LibraryCard";
+import UniversalCard from "@/components/shared/UniversalCard";
 
 const currentReads = [
     {
@@ -74,13 +74,24 @@ const currentReads = [
 export default function CurrentReads() {
     return (
         <section className="w-full">
-            <h2 className="text-xl md:text-2xl font-semibold text-black mb-6">
+            <h2 className="text-xl md:text-2xl font-semibold text-black mb-8">
                 Current Reads
             </h2>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 lg:gap-8">
                 {currentReads.map((item) => (
-                    <LibraryCard key={item.id} item={item} />
+                    <UniversalCard
+                        key={item.id}
+                        id={item.id}
+                        title={item.title}
+                        author={item.author}
+                        genre={item.genre}
+                        image={item.image}
+                        views={item.views}
+                        likes={parseInt(item.likes)}
+                        comments={item.comments}
+                        type={item.type}
+                    />
                 ))}
             </div>
         </section>

@@ -23,41 +23,39 @@ import { logout, isAuthenticated } from "@/utils/auth";
 export default function Navbar() {
   const [openMenu, setOpenMenu] = useState<"genre" | "browse" | "profile" | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isAuth, setIsAuth] = useState<boolean | null>(null);
+  const [isAuth, setIsAuth] = useState<boolean | null>(null); // null = auth not checked yet
   const navRef = useRef<HTMLDivElement>(null);
 
   /* Check authentication on mount and listen for changes */
   useEffect(() => {
-    setIsAuth(isAuthenticated());
+    const checkAuth = () => setIsAuth(isAuthenticated());
+    checkAuth(); // initial check
 
-    // Listen for custom auth change event
-    const handleAuthChange = () => {
-      setIsAuth(isAuthenticated());
-    };
+    // Listen for custom auth change events or storage changes (login/logout)
+    window.addEventListener("authChange", checkAuth);
+    window.addEventListener("storage", checkAuth);
 
-    window.addEventListener("authChange", handleAuthChange);
-    window.addEventListener("storage", handleAuthChange);
-    
     return () => {
-      window.removeEventListener("authChange", handleAuthChange);
-      window.removeEventListener("storage", handleAuthChange);
+      window.removeEventListener("authChange", checkAuth);
+      window.removeEventListener("storage", checkAuth);
     };
   }, []);
 
-  /* Close desktop dropdown on outside click */
+  /* Close dropdown on outside click */
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (!navRef.current?.contains(e.target as Node)) {
         setOpenMenu(null);
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Don't render until we've checked authentication
-  if (isAuth === null) return null;
-  if (!isAuth) return null;
+  // Only render navbar if auth check completed and user is authenticated
+  if (isAuth === null) return null; // auth not yet determined
+  if (!isAuth) return null; // user not logged in
 
   return (
     <>
@@ -67,13 +65,14 @@ export default function Navbar() {
         className="fixed top-4 inset-x-0 z-50 flex justify-center px-4"
       >
         <div className="w-full max-w-6xl backdrop-blur-md bg-white/70 border border-gray-200/40 shadow-lg rounded-2xl px-6 py-3">
-
           {/* DESKTOP */}
           <div className="hidden md:flex justify-between items-center">
-
             {/* LEFT */}
             <div className="flex items-center gap-12">
-              <Link href="/home" className="font-bold text-xl text-black flex items-center">
+              <Link
+                href="/home"
+                className="font-bold text-xl text-black flex items-center"
+              >
                 <PenLine size={18} className="mr-2" />
                 Sisakalam
               </Link>
@@ -84,7 +83,7 @@ export default function Navbar() {
                   onMouseLeave={() => setOpenMenu(null)}
                   className="relative"
                 >
-                  <button className="flex items-center gap-1 text-sm text-black hover:text-black">
+                  <button className="flex items-center gap-1 text-sm text-black">
                     Browse <ChevronDown size={16} />
                   </button>
                   {openMenu === "browse" && <BrowseMenu />}
@@ -95,13 +94,13 @@ export default function Navbar() {
                   onMouseLeave={() => setOpenMenu(null)}
                   className="relative"
                 >
-                  <button className="flex items-center gap-1 text-sm text-black hover:text-black">
+                  <button className="flex items-center gap-1 text-sm text-black">
                     Genre <ChevronDown size={16} />
                   </button>
                   {openMenu === "genre" && <MegaMenu />}
                 </div>
 
-                <Link href="/library" className="text-sm text-black hover:text-black">
+                <Link href="/library" className="text-sm text-black">
                   Library
                 </Link>
               </div>
@@ -113,14 +112,19 @@ export default function Navbar() {
                 placeholder="Search..."
                 className="border border-gray-500 rounded-full px-10 py-2 text-sm text-gray-500"
               />
-              <Link href="/write" >
-              <button className="px-5 py-2 rounded-full bg-black text-white text-sm flex items-center gap-2 cursor-pointer">
-                <Plus size={16} />
-                Start Writing
-              </button>
+
+              <Link href="/write">
+                <button className="px-5 py-2 rounded-full bg-black text-white text-sm flex items-center gap-2 cursor-pointer">
+                  <Plus size={16} />
+                  Start Writing
+                </button>
               </Link>
 
-              <Bell size={20} className="cursor-pointer text-black" strokeWidth={2} />
+              <Bell
+                size={20}
+                className="cursor-pointer text-black"
+                strokeWidth={2}
+              />
 
               <div
                 onMouseEnter={() => setOpenMenu("profile")}
@@ -135,20 +139,19 @@ export default function Navbar() {
 
           {/* MOBILE */}
           <div className="flex md:hidden justify-between items-center">
-
-            {/* Logo */}
-            <Link href="/home" className="font-bold text-lg text-black flex items-center">
+            <Link
+              href="/home"
+              className="font-bold text-lg text-black flex items-center"
+            >
               <PenLine size={18} className="mr-2 text-black" strokeWidth={2} />
               Sisakalam
             </Link>
 
-            {/* Search */}
             <input
               placeholder="Search..."
               className="flex-1 mx-4 border border-gray-500 rounded-full px-3 py-1 text-sm text-gray-500"
             />
 
-            {/* Hamburger */}
             <button onClick={() => setMobileOpen(true)}>
               <Menu size={24} className="text-black cursor-pointer" />
             </button>
@@ -158,20 +161,23 @@ export default function Navbar() {
 
       {/* MOBILE DRAWER */}
       <div
-        className={`fixed inset-0 z-50 transition ${mobileOpen ? "visible" : "invisible"
-          }`}
+        className={`fixed inset-0 z-50 transition ${
+          mobileOpen ? "visible" : "invisible"
+        }`}
       >
         {/* Overlay */}
         <div
-          className={`absolute inset-0 bg-black/40 transition-opacity ${mobileOpen ? "opacity-100" : "opacity-0"
-            }`}
+          className={`absolute inset-0 bg-black/40 transition-opacity ${
+            mobileOpen ? "opacity-100" : "opacity-0"
+          }`}
           onClick={() => setMobileOpen(false)}
         />
 
         {/* Drawer */}
         <div
-          className={`absolute right-0 top-0 h-full w-72 bg-white shadow-xl transform transition-transform duration-300 ${mobileOpen ? "translate-x-0" : "translate-x-full"
-            }`}
+          className={`absolute right-0 top-0 h-full w-72 bg-white shadow-xl transform transition-transform duration-300 ${
+            mobileOpen ? "translate-x-0" : "translate-x-full"
+          }`}
         >
           <div className="flex justify-end items-center p-5 border-b">
             <X
@@ -182,7 +188,6 @@ export default function Navbar() {
           </div>
 
           <div className="p-5 space-y-6 text-gray-700">
-
             <div className="flex items-center gap-3 cursor-pointer">
               <LayoutGrid size={18} className="text-black" />
               Browse
@@ -203,25 +208,27 @@ export default function Navbar() {
               Profile
             </div>
 
-            {/* Divider */}
             <div className="my-2 h-px bg-gray-200"></div>
 
-            {/* Logout */}
             <div
-              onClick={logout}
+              onClick={() => {
+                logout();
+                setIsAuth(false); // immediately hide navbar on logout
+              }}
               className="flex items-center gap-3 cursor-pointer text-red-500 hover:text-red-600"
             >
               <LogOut size={18} />
               Logout
             </div>
-
           </div>
 
           <div className="absolute bottom-6 left-0 right-0 px-5">
-            <button className="w-full bg-black hover:bg-gray-800 text-white py-3 rounded-full flex items-center justify-center gap-2 shadow-lg">
-              <Plus size={16} />
-              Start Writing
-            </button>
+            <Link href="/write">
+              <button className="w-full bg-black hover:bg-gray-800 text-white py-3 rounded-full flex items-center justify-center gap-2 shadow-lg">
+                <Plus size={16} />
+                Start Writing
+              </button>
+            </Link>
           </div>
         </div>
       </div>

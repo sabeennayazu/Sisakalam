@@ -1,6 +1,6 @@
 "use client";
 
-import ProfileCard from "./ProfileCard";
+import UniversalCard from "@/components/shared/UniversalCard";
 
 const stories = [
     { id: 1, title: "The Last Librarian", author: "Marcus Thorne", genre: "Sci-Fi", views: "15M", likes: 2100, comments: "1.2K", time: "1 month ago", image: "/images/covers/cover7.jpg" },
@@ -12,14 +12,14 @@ const stories = [
 export default function StoriesTab() {
     return (
         <div>
-            <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-2">
+            <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-3">
                 <h2 className="font-serif font-bold text-xl text-black">All Stories</h2>
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{stories.length} Works</span>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 lg:gap-8">
                 {stories.map((story) => (
-                    <ProfileCard 
+                    <UniversalCard 
                         key={story.id}
                         id={story.id}
                         title={story.title}

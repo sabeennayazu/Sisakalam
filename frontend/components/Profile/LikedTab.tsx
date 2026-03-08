@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import ProfileCard from "./ProfileCard";
+import UniversalCard from "@/components/shared/UniversalCard";
 
 type ItemType = "story" | "poem";
 
@@ -139,10 +139,10 @@ export default function LikedTab() {
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 lg:gap-8">
 
         {filtered.map((item) => (
-          <ProfileCard
+          <UniversalCard
              key={item.id}
              id={item.id}
              title={item.title}

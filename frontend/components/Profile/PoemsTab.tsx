@@ -1,6 +1,6 @@
 "use client";
 
-import ProfileCard from "./ProfileCard";
+import UniversalCard from "@/components/shared/UniversalCard";
 
 const poems = [
     { id: 1, title: "Echoes of Silence", author: "Clara M. Thorne", genre: "Romanticism", views: "45M", likes: 1200, comments: "1.2K", time: "2 days ago", image: "/images/covers/cover1.jpg" },
@@ -14,14 +14,14 @@ const poems = [
 export default function PoemsTab() {
     return (
         <div>
-            <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-2">
+            <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-3">
                 <h2 className="font-serif font-bold text-xl text-black">All Poems</h2>
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{poems.length} Works</span>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 lg:gap-8">
                 {poems.map((poem) => (
-                    <ProfileCard 
+                    <UniversalCard 
                         key={poem.id}
                         id={poem.id}
                         title={poem.title}
