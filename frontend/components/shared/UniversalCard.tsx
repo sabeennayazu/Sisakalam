@@ -58,7 +58,7 @@ export default function UniversalCard({
 
     return (
         <div
-            className="min-w-[150px] md:min-w-[180px] lg:min-w-[200px]  group cursor-pointer relative"
+            className="min-w-[150px] md:min-w-[180px] lg:min-w-[200px]  group cursor-pointer relative "
             onClick={onClick}
         >
             {/* Selection Checkbox */}
@@ -76,7 +76,7 @@ export default function UniversalCard({
 
             {/* Cover Image Container */}
             <div
-                className={`relative overflow-hidden rounded-lg md:rounded-xl mb-3 md:mb-4 shrink-0 h-48 md:h-56 lg:h-72 ${
+                className={`relative overflow-hidden rounded-lg md:rounded-xl mb-3 mr-2 md:mb-4 shrink-0 h-48 md:h-56 lg:h-72 ${
                     selectionMode && isSelected ? "ring-2 ring-black" : ""
                 }`}
             >
@@ -145,7 +145,7 @@ export default function UniversalCard({
             )}
 
             {/* Stats (Views, Likes, Comments) */}
-            <div className="flex items-center justify-between text-xs text-gray-500 mt-3">
+            <div className="flex items-center justify-between text-xs text-gray-500 mt-3 pr-2">
                 <div className="flex items-center gap-1">
                     <Eye size={14} />
                     <span className="truncate">{formattedViews}</span>

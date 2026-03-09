@@ -290,6 +290,7 @@ export default function StoryPage({ params }: StoryPageProps) {
               <ReviewsSection
                 totalReviews={6464}
                 averageRating={4.71}
+                reviewType="story"
               />
             )}
 
