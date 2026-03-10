@@ -136,6 +136,9 @@ export default function StoriesByGenre() {
             />
           ))}
         </div>
+        <div>
+          <button className="bg-black text-white rounded-full px-4 py-1 mt-4">see more</button>
+        </div>
       </div>
     </section>
   );

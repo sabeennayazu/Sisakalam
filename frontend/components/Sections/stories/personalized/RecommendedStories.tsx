@@ -55,6 +55,16 @@ const recommendedStories = [
     comments: "800",
     image: "https://images.unsplash.com/photo-1507842217343-583f20270319?w=500&h=700&fit=crop",
   },
+  {
+    id: 6,
+    title: "Eternal Flame",
+    author: "James Morrison",
+    genre: "fantasy",
+    views: "3.9M",
+    likes: 1200,
+    comments: "680",
+    image: "https://images.unsplash.com/photo-1516979187457-635ffe35ff91?w=500&h=700&fit=crop",
+  }
 ];
 
 export default function RecommendedStories() {
@@ -74,7 +84,7 @@ export default function RecommendedStories() {
       <div className="max-w-7xl mx-auto relative">
         {/* Title */}
         <h2 className="text-xl md:text-2xl lg:text-3xl text-black font-semibold mb-6 md:mb-8">
-          Recommended for You
+          Recommended Stories for You
         </h2>
 
         {/* Slider Buttons */}
