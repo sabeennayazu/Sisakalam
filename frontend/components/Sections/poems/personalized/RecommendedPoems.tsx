@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import UniversalCard from "@/components/shared/UniversalCard";
+import Link from "next/link";
 
 const recommendedPoems = [
   {
@@ -13,7 +14,7 @@ const recommendedPoems = [
     views: "450K",
     likes: 320,
     comments: "180",
-    image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=500&h=700&fit=crop",
+    image: "/images/covers/cover11.jpg",
   },
   {
     id: 2,
@@ -116,6 +117,17 @@ export default function RecommendedPoems() {
             />
           ))}
         </div>
+          <div className="relative flex items-center justify-center my-6 md:my-8 lg:my-10">
+  {/* Gray Line */}
+  <div className="absolute w-full border-t border-gray-300"></div>
+
+  {/* Button */}
+  <Link href="/genre" >
+  <button className="relative bg-black text-white border border-black rounded-full px-6 py-2 text-sm transition-all duration-200 hover:bg-white hover:text-black cursor-pointer">
+  See More
+</button>
+  </Link>
+</div>
       </div>
     </section>
   );

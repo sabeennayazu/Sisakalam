@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import UniversalCard from "@/components/shared/UniversalCard";
+import Link from "next/link";
 
 const poems = [
   {
@@ -80,7 +81,7 @@ export default function PoemsByMood() {
   };
 
   return (
-    <section className="py-8 md:py-12 lg:py-14 px-4 md:px-6 lg:px-8 bg-white">
+    <section className=" px-4 md:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto relative">
         {/* Title */}
         <h2 className="text-xl md:text-2xl lg:text-3xl text-black font-semibold mb-6 md:mb-8">
@@ -126,6 +127,17 @@ export default function PoemsByMood() {
             />
           ))}
         </div>
+         <div className="relative flex items-center justify-center my-6 md:my-8 lg:my-10">
+  {/* Gray Line */}
+  <div className="absolute w-full border-t border-gray-300"></div>
+
+  {/* Button */}
+  <Link href="/genre" >
+  <button className="relative bg-black text-white border border-black rounded-full px-6 py-2 text-sm transition-all duration-200 hover:bg-white hover:text-black cursor-pointer">
+  See More
+</button>
+  </Link>
+</div>
       </div>
     </section>
   );

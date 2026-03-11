@@ -8,7 +8,7 @@ import type { Story } from '@/mock/stories';
 import type { Chapter } from '@/mock/chapters';
 
 interface StoryPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ storyId: string }>;
 }
 
 export default function StoryPage({ params }: StoryPageProps) {
@@ -20,7 +20,7 @@ export default function StoryPage({ params }: StoryPageProps) {
   // Resolve params
   useEffect(() => {
     params.then((resolved) => {
-      const id = parseInt(resolved.id, 10);
+      const id = parseInt(resolved.storyId, 10);
       setStoryId(id);
       setParamResolved(true);
     });
@@ -70,7 +70,7 @@ export default function StoryPage({ params }: StoryPageProps) {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-20 text-white">
+      <section className="relative overflow-hidden bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 py-20 text-white">
         <div className="absolute inset-0">
           <Image
             src={story.cover_image}
@@ -79,7 +79,7 @@ export default function StoryPage({ params }: StoryPageProps) {
             className="object-cover opacity-20 blur-lg"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-r from-gray-900 to-transparent" />
         </div>
 
         <div className="relative z-10 mx-auto max-w-6xl px-8">

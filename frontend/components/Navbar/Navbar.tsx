@@ -114,7 +114,7 @@ export default function Navbar() {
               />
 
               <Link href="/write">
-                <button className="px-5 py-2 rounded-full bg-black text-white text-sm flex items-center gap-2 cursor-pointer">
+                <button className="px-5 py-2 rounded-full bg-black text-white text-sm flex items-center gap-2 cursor-pointer hover:bg-white hover:text-black border border-black transition-all duration-200">
                   <Plus size={16} />
                   Start Writing
                 </button>

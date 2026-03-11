@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import UniversalCard from "@/components/shared/UniversalCard";
+import Link from "next/link";
 
 const recommendedStories = [
   {
@@ -13,7 +14,7 @@ const recommendedStories = [
     views: "3.8M",
     likes: 1120,
     comments: "620",
-    image: "https://images.unsplash.com/photo-1507714179905-a0c17fae5dfe?w=500&h=700&fit=crop",
+    image: "/images/covers/cover10.jpg",
   },
   {
     id: 2,
@@ -23,7 +24,7 @@ const recommendedStories = [
     views: "4.2M",
     likes: 1340,
     comments: "720",
-    image: "https://images.unsplash.com/photo-1518984667514-155f3e95c84e?w=500&h=700&fit=crop",
+    image: "/images/covers/cover13.jpg",
   },
   {
     id: 3,
@@ -33,7 +34,7 @@ const recommendedStories = [
     views: "3.5M",
     likes: 980,
     comments: "540",
-    image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=500&h=700&fit=crop",
+    image: "/images/covers/cover14.jpg",
   },
   {
     id: 4,
@@ -43,7 +44,7 @@ const recommendedStories = [
     views: "3.1M",
     likes: 850,
     comments: "450",
-    image: "https://images.unsplash.com/photo-1516979187457-635ffe35ff91?w=500&h=700&fit=crop",
+    image: "/images/covers/cover15.jpg",
   },
   {
     id: 5,
@@ -53,7 +54,7 @@ const recommendedStories = [
     views: "4.5M",
     likes: 1450,
     comments: "800",
-    image: "https://images.unsplash.com/photo-1507842217343-583f20270319?w=500&h=700&fit=crop",
+    image: "/images/covers/cover16.jpg",
   },
   {
     id: 6,
@@ -63,7 +64,7 @@ const recommendedStories = [
     views: "3.9M",
     likes: 1200,
     comments: "680",
-    image: "https://images.unsplash.com/photo-1516979187457-635ffe35ff91?w=500&h=700&fit=crop",
+    image: "/images/covers/cover17.jpg",
   }
 ];
 
@@ -80,7 +81,7 @@ export default function RecommendedStories() {
   };
 
   return (
-    <section className="py-8 md:py-12 lg:py-14 px-4 md:px-6 lg:px-8 bg-white">
+    <section className=" px-4 md:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto relative">
         {/* Title */}
         <h2 className="text-xl md:text-2xl lg:text-3xl text-black font-semibold mb-6 md:mb-8">
@@ -126,6 +127,17 @@ export default function RecommendedStories() {
             />
           ))}
         </div>
+          <div className="relative flex items-center justify-center my-6 md:my-8 lg:my-10">
+  {/* Gray Line */}
+  <div className="absolute w-full border-t border-gray-300"></div>
+
+  {/* Button */}
+  <Link href="/genre" >
+  <button className="relative bg-black text-white border border-black rounded-full px-6 py-2 text-sm transition-all duration-200 hover:bg-white hover:text-black cursor-pointer">
+  See More
+</button>
+  </Link>
+</div>
       </div>
     </section>
   );
