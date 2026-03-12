@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { getStoryById, getChaptersByStory } from '@/lib/mock-api';
 import type { Story } from '@/mock/stories';
 import type { Chapter } from '@/mock/chapters';
+import { mockStories } from '../mockData';
 
 interface StoryPageProps {
   params: Promise<{ id: string }>;
