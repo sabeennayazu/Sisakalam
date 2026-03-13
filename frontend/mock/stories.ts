@@ -16,6 +16,38 @@ export interface Story {
 
 export const stories: Story[] = [
   {
+    id: 1,
+    title: "My Fake Boyfriend",
+    slug: "my-fake-boyfriend",
+    author: "Sofia Lane",
+    cover_image: "/images/covers/cover13.jpg",
+    description:
+      "When college sophomore Aria Blake needs a fake relationship to get her ex off her back, she strikes a deal with the most annoyingly attractive man on campus — Ethan Cole. What starts as a perfectly choreographed lie quickly spirals into something neither of them planned for.",
+    genre: "Romance",
+    tags: ["romance", "college", "fake dating", "friends to lovers", "comedy"],
+    total_chapters: 3,
+    created_at: "2025-09-10",
+    views: 87400,
+    likes: 14200,
+    bookmarks: 5100,
+  },
+  {
+    id: 3,
+    title: "Torment",
+    slug: "torment",
+    author: "Marcus Vale",
+    cover_image: "/images/covers/cover3.jpg",
+    description:
+      "Decades after a brutal civil war, the land of Varek is scarred and silent. Former soldier Kira Ashveil returns to the village she once burned to the ground — haunted by the faces she cannot forget. A gripping dark fantasy that asks if redemption is ever truly possible.",
+    genre: "Dark Fantasy",
+    tags: ["dark fantasy", "redemption", "war", "guilt", "revenge"],
+    total_chapters: 3,
+    created_at: "2025-11-02",
+    views: 62300,
+    likes: 9800,
+    bookmarks: 3400,
+  },
+  {
     id: 5,
     title: "The Beginning of the End",
     slug: "the-beginning-of-the-end",

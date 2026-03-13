@@ -23,7 +23,7 @@ import ChapterCommentsPanel from '@/components/sidebar/ChapterCommentsPanel';
 import { useReadingSettings } from '@/hooks/useReadingSettings';
 
 interface PageProps {
-  params: Promise<{ storyId: string; chapterSlug: string }>;
+  params: Promise<{ id: string; chapterSlug: string }>;
 }
 
 export default function ChapterReadingPage({ params }: PageProps) {
@@ -49,7 +49,7 @@ export default function ChapterReadingPage({ params }: PageProps) {
   // Resolve params
   useEffect(() => {
     params.then((resolved) => {
-      setStoryId(parseInt(resolved.storyId, 10));
+      setStoryId(parseInt(resolved.id, 10));
       setChapterSlug(resolved.chapterSlug);
       setParamsResolved(true);
     });
