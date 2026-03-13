@@ -524,6 +524,8 @@ The field was quiet. The village was lit. The stars were where they always were.
 
 Kira Ashveil exhaled, and let the moment be where she was.`;
 
+const tormentChapter4Content = `lorem ipsum`;
+
 export const chapters: Chapter[] = [
   // ─── My Fake Boyfriend — Story 1 ────────────────────────────────────────
   {
