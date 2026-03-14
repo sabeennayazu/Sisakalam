@@ -36,7 +36,7 @@ class Story(models.Model):
 
     title = models.CharField(max_length=200)
 
-    content = models.TextField()
+   
 
     synopsis = models.TextField(max_length=500)
 
@@ -94,3 +94,24 @@ class Story(models.Model):
 
     def __str__(self):
         return self.title
+
+class Chapter(models.Model):
+    story = models.ForeignKey(
+        Story,
+        on_delete=models.CASCADE,
+        related_name="chapters"
+    )
+    title = models.CharField(max_length=200)
+    chapter_number = models.PositiveIntegerField()
+    content = models.TextField()
+    order = models.PositiveIntegerField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("story", "order")
+        ordering = ["order"]
+
+    def __str__(self):
+        return f"{self.story.title} - Chapter {self.order}: {self.title}"
