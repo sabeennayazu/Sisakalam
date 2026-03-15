@@ -77,7 +77,7 @@ class Story(models.Model):
         null=True,
         blank=True
     )
-
+    chapter_count = models.PositiveIntegerField(default=0)
     views = models.PositiveIntegerField(default=0)
     likes = models.PositiveIntegerField(default=0)
     comments_count = models.PositiveIntegerField(default=0)
