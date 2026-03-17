@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import CurrentReads from "@/components/Library/CurrentReads";
-import Saved from "@/components/Library/Saved";
+import Bookmarks from "@/components/Library/Bookmarks";
 import History from "@/components/Library/History";
+import Collections from "@/components/Library/Collections";
+import Drafts from "@/components/Library/Drafts";
 
-type TabType = "current" | "saved" | "history";
+type TabType = "current" | "Bookmarks" | "history" | "collections" | "drafts";
 
 // Dummy data mimicking a JSON API response
 const trendingTags = [
@@ -26,10 +28,14 @@ export default function LibraryPage() {
         switch (activeTab) {
             case "current":
                 return <CurrentReads />;
-            case "saved":
-                return <Saved />;
+            case "Bookmarks":
+                return <Bookmarks />;
             case "history":
                 return <History />;
+            case "collections":
+                return <Collections />;
+            case "drafts":
+                return <Drafts />;
             default:
                 return null;
         }
@@ -55,13 +61,13 @@ export default function LibraryPage() {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab("saved")}
-                        className={`w-full text-left text-black px-4 py-2 rounded-lg ${activeTab === "saved"
+                        onClick={() => setActiveTab("Bookmarks")}
+                        className={`w-full text-left text-black px-4 py-2 rounded-lg ${activeTab === "Bookmarks"
                             ? "bg-blue-50 text-blue-600 font-medium"
                             : "hover:bg-gray-300"
                             }`}
                     >
-                        Saved
+                        Bookmark
                     </button>
 
                     <button
@@ -72,6 +78,26 @@ export default function LibraryPage() {
                             }`}
                     >
                         History
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab("collections")}
+                        className={`w-full text-left text-black px-4 py-2 rounded-lg ${activeTab === "collections"
+                            ? "bg-blue-50 text-blue-600 font-medium"
+                            : "hover:bg-gray-300"
+                            }`}
+                    >
+                        Collections
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab("drafts")}
+                        className={`w-full text-left text-black px-4 py-2 rounded-lg ${activeTab === "drafts"
+                            ? "bg-blue-50 text-blue-600 font-medium"
+                            : "hover:bg-gray-300"
+                            }`}
+                    >
+                        Drafts
                     </button>
                 </nav>
 

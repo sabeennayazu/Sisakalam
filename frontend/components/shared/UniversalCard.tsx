@@ -24,6 +24,7 @@ export interface UniversalCardProps {
     
     // UI options
     showBookmark?: boolean;
+    showStats?: boolean;
     
     // Flexible props for future use
     description?: string;
@@ -47,6 +48,7 @@ export default function UniversalCard({
     isSelected = false,
     onToggleSelect,
     showBookmark = true,
+    showStats = true,
     description,
     tags,
     onClick,
@@ -145,19 +147,21 @@ export default function UniversalCard({
             )}
 
             {/* Stats (Views, Likes, Comments) */}
-            <div className="flex items-center justify-between text-xs text-gray-500 mt-3 pr-2">
-                <div className="flex items-center gap-1">
-                    <Eye size={14} />
-                    <span className="truncate">{formattedViews}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                    <LikeButton storyId={id} initialLikes={likes} />
-                    <div className="flex items-center gap-1 hover:text-black transition-colors">
-                        <MessageCircle size={14} />
-                        <span className="truncate">{formattedComments}</span>
+            {showStats && (
+                <div className="flex items-center justify-between text-xs text-gray-500 mt-3 pr-2">
+                    <div className="flex items-center gap-1">
+                        <Eye size={14} />
+                        <span className="truncate">{formattedViews}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <LikeButton storyId={id} initialLikes={likes} />
+                        <div className="flex items-center gap-1 hover:text-black transition-colors">
+                            <MessageCircle size={14} />
+                            <span className="truncate">{formattedComments}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Additional Children (for custom content) */}
             {children && <div className="mt-2">{children}</div>}
