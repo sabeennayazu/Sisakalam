@@ -104,53 +104,12 @@ export default function PoemPage({ params }: PoemPageProps) {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <DynamicBlobBackground imageUrl={poem.cover_image}>
-        <section className="relative overflow-hidden py-26 text-white">
-          {/* Dynamic Gradient Background */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `linear-gradient(135deg, ${heroColors.dominant}, ${heroColors.secondary})`,
-            }}
-          />
-
-          {/* Radial Glow */}
-          <div
-            className="absolute inset-0 opacity-70"
-            style={{
-              background: `radial-gradient(circle at 70% 30%, ${heroColors.glow}, transparent 60%)`,
-            }}
-          />
-
-          {/* Blur Glow Effect */}
-          <div
-            className="absolute -top-40 -right-40 w-[700px] h-[700px] blur-[140px] rounded-full opacity-60"
-            style={{
-              background: heroColors.glow,
-            }}
-          />
-
-          {/* Blurred Cover Overlay */}
-          <Image
-            src={poem.cover_image}
-            alt=""
-            fill
-            priority
-            className="object-cover blur-3xl scale-125 opacity-30"
-            sizes="100vw"
-          />
-
-          {/* Dark overlay */}
-          <div className="absolute inset-0" />
-
-          {/* Bottom fade */}
-          <div className="absolute bottom-0 w-full h-40 bg-linear-to-b from-transparent to-white" />
-
-          {/* CONTENT */}
-          <div className="relative z-10 max-w-6xl mx-auto px-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* COVER */}
-              <div className="relative h-[450px] w-full max-w-xs rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/20">
+      <section className="relative bg-[#1a1a1a] text-white py-16">
+        <div className="relative z-10 mx-auto max-w-6xl px-8">
+          <div className="flex flex-col md:flex-row gap-12">
+            {/* COVER */}
+            <div className="flex-shrink-0 flex justify-center md:justify-start">
+              <div className="relative h-[400px] w-[260px] overflow-hidden rounded-md shadow-2xl">
                 <Image
                   src={poem.cover_image}
                   alt={poem.title}
@@ -159,58 +118,94 @@ export default function PoemPage({ params }: PoemPageProps) {
                   priority
                 />
               </div>
+            </div>
 
-              {/* INFO */}
-              <div className="md:col-span-2">
-                <span className="bg-white/10 backdrop-blur px-3 py-1 rounded-full border text-xs">
+            {/* INFO */}
+            <div className="flex flex-col justify-center max-w-3xl">
+              <div className="mb-4">
+                <span className="inline-block rounded-full border border-gray-700 bg-white/5 px-4 py-1.5 text-xs font-bold tracking-widest text-gray-300 uppercase">
                   {poem.genre}
                 </span>
+              </div>
 
-                <h1 className="text-5xl font-semibold mt-4 mb-3">
+              <div className="mb-4">
+                <h1 className="text-4xl md:text-6xl font-serif font-bold tracking-tight mb-2">
                   {poem.title}
                 </h1>
-
-                <p className="text-white/80 mb-6">
+                <p className="text-xl text-gray-400 italic">
                   by {poem.author.name}
                 </p>
+              </div>
 
-                {/* STATS */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  {[
-                    ["Views", poem.views],
-                    ["Likes", poem.likes],
-                    ["Comments", poem.comments],
-                    ["Bookmarks", poem.bookmarks],
-                  ].map(([label, value]) => (
-                    <div
-                      key={label}
-                      className="bg-white/10 backdrop-blur-lg rounded-xl p-4"
-                    >
-                      <p className="text-xs text-white/70">
-                        {label}
-                      </p>
-                      <p className="text-2xl font-bold">
-                        {(Number(value) / 1000).toFixed(1)}K
-                      </p>
-                    </div>
-                  ))}
+              <p className="text-gray-300 text-base leading-relaxed mb-8 max-w-2xl line-clamp-3">
+                {poem.content}
+              </p>
+
+              {/* STATS */}
+              <div className="flex flex-wrap gap-8 md:gap-12 mb-8">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <span className="text-lg font-bold">{(poem.views / 1000).toFixed(1)}K</span>
+                  </div>
+                  <span className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Views</span>
+                </div>
+                
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span className="text-lg font-bold">{(poem.likes / 1000).toFixed(1)}K</span>
+                  </div>
+                  <span className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Likes</span>
                 </div>
 
-                {/* BUTTONS */}
-                <div className="flex gap-4">
-                  <button className="px-8 py-3 bg-black text-white rounded-full font-semibold">
-                    Read Now
-                  </button>
-
-                  <button className="px-8 py-3 bg-white/10 backdrop-blur border rounded-full">
-                    Add to Library
-                  </button>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <span className="text-lg font-bold">{(poem.comments / 1000).toFixed(1)}K</span>
+                  </div>
+                  <span className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Comments</span>
                 </div>
+
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    <span className="text-lg font-bold">{(poem.bookmarks / 1000).toFixed(1)}K</span>
+                  </div>
+                  <span className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Bookmarks</span>
+                </div>
+              </div>
+
+              {/* BUTTONS */}
+              <div className="flex flex-wrap items-center gap-4">
+                <button className="flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black hover:bg-gray-100 transition-colors">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                    <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1.177-15.177L7.646 10H14v4H7.646l3.177 3.177-1.414 1.414L3.818 13.004l-.014-.014L2 11.207l1.79-1.798.014-.014 5.59-5.59 1.415 1.415zM22 12h-6v2h6v-2z" />
+                  </svg>
+                  Read Now
+                </button>
+                <button className="flex items-center gap-2 rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-white/5 transition-colors">
+                  Add to Library
+                </button>
+                <button className="flex items-center justify-center rounded-full border border-gray-600 p-3.5 text-white hover:bg-white/5 transition-colors">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
-        </section>
-      </DynamicBlobBackground>
+        </div>
+      </section>
 
       {/* Main Content */}
       <section className="relative overflow-hidden">

@@ -49,7 +49,7 @@ export default function StoriesPage() {
                     </span>
                   </div>
 
-                  <h3 className="text-xl font-serif font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                  <h3 className="text-xl font-serif font-bold text-gray-900 mb-2 group-hover:text-black transition-colors">
                     {story.title}
                   </h3>
 
