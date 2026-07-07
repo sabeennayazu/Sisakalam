@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
@@ -56,3 +57,66 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+
+class PrivacyPermission(models.TextChoices):
+    EVERYONE = "everyone", "Everyone"
+    REGISTERED = "registered", "Registered users"
+    FOLLOWERS = "followers", "Followers only"
+    NO_ONE = "noone", "No one"
+
+
+class UserPrivacyPreference(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="privacy_preferences"
+    )
+    show_in_search = models.BooleanField(default=True)
+    hide_from_search_engines = models.BooleanField(default=False)
+    hide_followers_list = models.BooleanField(default=False)
+    allow_story_comments = models.CharField(
+        max_length=20,
+        choices=PrivacyPermission.choices,
+        default=PrivacyPermission.EVERYONE,
+    )
+    allow_poem_comments = models.CharField(
+        max_length=20,
+        choices=PrivacyPermission.choices,
+        default=PrivacyPermission.EVERYONE,
+    )
+    allow_messages = models.CharField(
+        max_length=20,
+        choices=PrivacyPermission.choices,
+        default=PrivacyPermission.REGISTERED,
+    )
+    allow_tagging = models.CharField(
+        max_length=20,
+        choices=PrivacyPermission.choices,
+        default=PrivacyPermission.FOLLOWERS,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Privacy settings for {self.user.email}"
+
+
+class Follow(models.Model):
+    follower = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="following_set"
+    )
+    following = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="followers_set"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("follower", "following")
+
+    def __str__(self):
+        return f"{self.follower.email} follows {self.following.email}"

@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'interactions',
     'notifications',
     'analytics',
+    'library',
 ]
 
 MIDDLEWARE = [
