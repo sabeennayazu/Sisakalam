@@ -249,14 +249,14 @@ export default function Collections() {
                                 className="group cursor-pointer flex flex-col"
                             >
                                 {/* Playlist Cover (Square-ish ratio) */}
-                                <div className="relative aspect-[4/3] w-full mb-3 rounded-xl overflow-hidden bg-gray-100">
+                                <div className="relative aspect-4/3 w-full mb-3 rounded-xl overflow-hidden bg-gray-100">
                                     <img 
                                         src={coverImage} 
                                         alt={playlist.name} 
                                         className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                                     />
                                     {/* Overlay Gradient for contrast */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                    <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                                     
                                     {/* Sub-actions that appear on hover */}
                                     <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -49,7 +49,7 @@ class CollectionItem(models.Model):
         ordering = ["added_at"]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(story__isnull=False) | models.Q(poem__isnull=False),
+                condition=models.Q(story__isnull=False) | models.Q(poem__isnull=False),
                 name="library_collectionitem_has_content"
             )
         ]
@@ -88,7 +88,7 @@ class ReadingHistory(models.Model):
         ordering = ["-last_read_at"]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(story__isnull=False) | models.Q(poem__isnull=False),
+                condition=models.Q(story__isnull=False) | models.Q(poem__isnull=False),
                 name="library_readinghistory_has_content"
             )
         ]

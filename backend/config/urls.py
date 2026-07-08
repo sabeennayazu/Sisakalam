@@ -10,6 +10,10 @@ urlpatterns = [
     path('api/accounts/', include('accounts.urls')),
     path('api/interactions/', include('interactions.urls')),
     path('api/stories/', include('stories.urls')),
+    path('api/poems/', include('poems.urls')),
+    path('api/library/', include('library.urls')),
+    path('api/notifications/', include('notifications.urls')),
+    path('api/analytics/', include('analytics.urls')),
 ]
 
 # This part is IMPORTANT

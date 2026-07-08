@@ -8,6 +8,14 @@ from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer
 from .models import User
 
 
+def get_tokens_for_user(user):
+    refresh = RefreshToken.for_user(user)
+    return {
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+    }
+
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
@@ -17,7 +25,9 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        tokens = get_tokens_for_user(user)
         return Response({
+            **tokens,
             "message": "User created successfully",
             "user": {
                 "id": user.id,
