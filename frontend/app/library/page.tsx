@@ -4,7 +4,6 @@ import { useState } from "react";
 import CurrentReads from "@/components/Library/CurrentReads";
 import Bookmarks from "@/components/Library/Bookmarks";
 import History from "@/components/Library/History";
-import Collections from "@/components/Library/Collections";
 import Drafts from "@/components/Library/Drafts";
 
 type TabType = "current" | "Bookmarks" | "history" | "collections" | "drafts";
@@ -32,8 +31,7 @@ export default function LibraryPage() {
                 return <Bookmarks />;
             case "history":
                 return <History />;
-            case "collections":
-                return <Collections />;
+        
             case "drafts":
                 return <Drafts />;
             default:
@@ -80,15 +78,7 @@ export default function LibraryPage() {
                         History
                     </button>
 
-                    <button
-                        onClick={() => setActiveTab("collections")}
-                        className={`w-full text-left text-black px-4 py-2 rounded-lg ${activeTab === "collections"
-                            ? "bg-blue-50 text-blue-600 font-medium"
-                            : "hover:bg-gray-300"
-                            }`}
-                    >
-                        Collections
-                    </button>
+                   
 
                     <button
                         onClick={() => setActiveTab("drafts")}

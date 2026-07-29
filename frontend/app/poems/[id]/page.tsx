@@ -6,10 +6,8 @@ import Link from "next/link";
 import { mockPoems } from "../mockData";
 import { extractImageColors } from "@/lib/extractImageColors";
 import DynamicBlobBackground from "@/components/ui/DynamicBlobBackground";
-import PoemStats from "@/components/Poems/PoemStats";
-import Tags from "@/components/Poems/Tags";
 import PoemTableOfContents from "@/components/Poems/PoemTableOfContents";
-import ReviewsSection from "@/components/Stories/ReviewsSection";
+import PoemDetailsSidebar from "@/components/Poems/PoemDetailsSidebar";
 
 interface PoemPageProps {
   params: Promise<{
@@ -17,15 +15,12 @@ interface PoemPageProps {
   }>;
 }
 
-type TabType = "tableOfContent" | "reviews";
-
 export default function PoemPage({ params }: PoemPageProps) {
   const [paramsResolved, setParamsResolved] = useState(false);
   const [id, setId] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [likes, setLikes] = useState(0);
-  const [activeTab, setActiveTab] = useState<TabType>("tableOfContent");
   const [heroColors, setHeroColors] = useState({
     dominant: "#1f2937",
     secondary: "#111827",
@@ -104,11 +99,11 @@ export default function PoemPage({ params }: PoemPageProps) {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-[#1a1a1a] text-white py-16">
+      <section className="relative bg-[#1a1a1a] text-white py-22">
         <div className="relative z-10 mx-auto max-w-6xl px-8">
           <div className="flex flex-col md:flex-row gap-12">
             {/* COVER */}
-            <div className="flex-shrink-0 flex justify-center md:justify-start">
+            <div className="shrink-0 flex justify-center md:justify-start">
               <div className="relative h-[400px] w-[260px] overflow-hidden rounded-md shadow-2xl">
                 <Image
                   src={poem.cover_image}
@@ -210,72 +205,28 @@ export default function PoemPage({ params }: PoemPageProps) {
       {/* Main Content */}
       <section className="relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-8 py-12">
-          {/* TAB NAVIGATION */}
-          <div className="mb-8 border-b border-gray-200">
-            <div className="flex gap-8">
-              <button
-                onClick={() => setActiveTab("tableOfContent")}
-                className={`pb-4 font-semibold text-lg transition-colors ${
-                  activeTab === "tableOfContent"
-                    ? "text-black border-b-2 border-black"
-                    : "text-gray-500 hover:text-black"
-                }`}
-              >
-                Table of Content
-              </button>
-              <button
-                onClick={() => setActiveTab("reviews")}
-                className={`pb-4 font-semibold text-lg transition-colors ${
-                  activeTab === "reviews"
-                    ? "text-black border-b-2 border-black"
-                    : "text-gray-500 hover:text-black"
-                }`}
-              >
-                Reviews
-              </button>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {/* LEFT */}
             <div className="lg:col-span-2">
-              {activeTab === "tableOfContent" && (
-                <div className="mb-8">
-                  <p className="text-xs uppercase tracking-widest text-gray-600 font-semibold mb-6">
-                    The Poem
-                  </p>
-                  <PoemTableOfContents content={poem.content} />
-                </div>
-              )}
-
-              {activeTab === "reviews" && (
-                <ReviewsSection totalReviews={892} averageRating={4.92} reviewType="poem" />
-              )}
+              <div className="mb-8">
+                <p className="text-xs uppercase tracking-widest text-gray-600 font-semibold mb-6">
+                  The Poem
+                </p>
+                <PoemTableOfContents content={poem.content} />
+              </div>
             </div>
 
-            {/* RIGHT SIDEBAR */}
             <div className="space-y-6">
-              {/* Stats and Rating */}
-              <div>
-                <p className="text-xs uppercase tracking-widest text-gray-600 font-semibold mb-4">
-                  Stats & Rating
-                </p>
-                <PoemStats
-                  rating={4.92}
-                  reviewCount={892}
-                  publicationDate={publicationDate}
-                  wordCount={wordCount}
-                  readingTime={readingTime}
-                />
-              </div>
-
-              {/* Tags */}
-              <Tags tags={poem.tags} />
-
-              {/* Report Content */}
-              <button className="w-full px-6 py-3 rounded-lg text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors font-medium text-sm">
-                🚩 REPORT CONTENT
-              </button>
+              <PoemDetailsSidebar
+                rating={4.92}
+                reviewCount={892}
+                publicationDate={publicationDate}
+                wordCount={wordCount}
+                readingTime={readingTime}
+                tags={poem.tags}
+                totalReviews={892}
+                averageRating={4.92}
+                reviewType="poem"
+              />
             </div>
           </div>
         </div>

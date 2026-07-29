@@ -295,7 +295,7 @@ export default function ChapterReadingPage({ params }: PageProps) {
       style={getCSSVars() as React.CSSProperties}
     >
 
-      <div className="flex py-28 bg-white">
+      <div className="flex py-22 bg-white">
 
         <div className="hidden flex-1 md:block" />
 
@@ -317,7 +317,7 @@ export default function ChapterReadingPage({ params }: PageProps) {
               ref={(el) => {
                 chapterRefs.current[chapter.slug] = el;
               }}
-              className={idx > 0 ? 'mt-20' : ''}
+               className={`${idx > 0 ? "mt-20" : ""} scroll-mt-28`}
             >
 
               <div className="mb-12">

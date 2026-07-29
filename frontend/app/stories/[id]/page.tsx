@@ -71,7 +71,7 @@ export default function StoryPage({ params }: StoryPageProps) {
   return (
     <div className="min-h-screen bg-white ">
       {/* Hero Section */}
-      <section className="relative bg-[#1a1a1a] text-white py-16">
+      <section className="relative bg-[#1a1a1a] text-white py-24">
         <div className="relative z-10 mx-auto max-w-6xl px-8">
           <div className="flex flex-col md:flex-row gap-12">
             {/* Book Cover */}
