@@ -7,8 +7,8 @@ import { apiFetch } from "./client";
  * @returns A paginated list of stories or a raw array from the backend.
  * @requiresAuthentication false
  */
-export const getStories = async (query?: Record<string, string | number | boolean | undefined | null>) => {
-  return apiFetch("/stories/", { query });
+export const getStories = async <T = unknown>(query?: Record<string, string | number | boolean | undefined | null>): Promise<T> => {
+  return apiFetch<T>("/stories/", { query });
 };
 
 /**

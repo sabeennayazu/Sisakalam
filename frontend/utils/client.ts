@@ -1,4 +1,11 @@
-import { API_BASE_URL, getToken } from "./api";
+import {
+  API_BASE_URL,
+  clearTokens,
+  getRefreshToken,
+  getToken,
+  refreshTokenApi,
+  setToken,
+} from "./api";
 
 export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: BodyInit | Record<string, unknown> | FormData | null;
@@ -55,6 +62,35 @@ const parseResponseBody = async (response: Response) => {
   }
 };
 
+let refreshPromise: Promise<string> | null = null;
+
+const refreshAccessToken = async (): Promise<string> => {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      if (!getRefreshToken()) {
+        throw new Error("No refresh token found");
+      }
+
+      const tokenResponse = await refreshTokenApi() as {
+        access: string;
+        refresh?: string;
+      };
+
+      const currentRefreshToken = getRefreshToken();
+      if (!currentRefreshToken) {
+        throw new Error("No refresh token found");
+      }
+
+      setToken(tokenResponse.access, tokenResponse.refresh ?? currentRefreshToken);
+      return tokenResponse.access;
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+};
+
 export const apiFetch = async <T = unknown>(
   path: string,
   options: ApiRequestOptions = {}
@@ -82,11 +118,26 @@ export const apiFetch = async <T = unknown>(
         ? body as BodyInit
         : JSON.stringify(body);
 
-  const response = await fetch(url, {
+  let response = await fetch(url, {
     ...requestOptions,
     headers: requestHeaders,
     body: finalBody,
   });
+
+  if (response.status === 401 && getRefreshToken()) {
+    try {
+      const accessToken = await refreshAccessToken();
+      requestHeaders.set("Authorization", `Bearer ${accessToken}`);
+      response = await fetch(url, {
+        ...requestOptions,
+        headers: requestHeaders,
+        body: finalBody,
+      });
+    } catch {
+      clearTokens();
+      // Keep the original 401 response as the error reported to the caller.
+    }
+  }
 
   const data = await parseResponseBody(response);
 

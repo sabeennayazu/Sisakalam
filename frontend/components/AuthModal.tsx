@@ -96,18 +96,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
       // Success!
       onClose();
       router.push("/home");
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle API errors (could be a string or JSON string from signupApi)
+      const message = error instanceof Error ? error.message : "An error occurred. Please try again.";
       try {
-        const apiError = JSON.parse(error.message);
+        const apiError = JSON.parse(message) as Record<string, unknown>;
         const mappedErrors: Record<string, string> = {};
         Object.keys(apiError).forEach((key) => {
           const val = apiError[key];
-          mappedErrors[key] = Array.isArray(val) ? val[0] : val;
+          mappedErrors[key] = Array.isArray(val) ? String(val[0]) : String(val);
         });
         setErrors(mappedErrors);
       } catch {
-        setErrors({ general: error.message || "An error occurred. Please try again." });
+        setErrors({ general: message });
       }
     } finally {
       setIsLoading(false);
@@ -244,7 +245,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ open, onClose }) => {
         <div className="mt-8 text-center text-sm text-gray-600">
           {mode === "login" ? (
             <p>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <button
                 onClick={toggleMode}
                 className="font-bold text-black hover:underline"

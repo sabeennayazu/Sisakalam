@@ -1,10 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import LikeViewSet, BookmarkViewSet
+from .views import LikeViewSet, BookmarkViewSet, liked_content, bookmarked_content
 
 router = DefaultRouter()
 
 urlpatterns = [
+    path('likes/', liked_content, name='liked-content'),
+    path('bookmarks/', bookmarked_content, name='bookmarked-content'),
     path('stories/<int:pk>/like/', LikeViewSet.as_view({'post': 'like_story'}), name='like-story'),
     path('stories/<int:pk>/unlike/', LikeViewSet.as_view({'post': 'unlike_story'}), name='unlike-story'),
     path('stories/<int:pk>/is-liked/', LikeViewSet.as_view({'get': 'is_liked'}), name='is-liked'),

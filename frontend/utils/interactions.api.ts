@@ -99,8 +99,14 @@ export const removePoemBookmark = async (poemId: string | number) => {
  * @requiresAuthentication true
  */
 export const getBookmarks = async () => {
-  // TODO: Backend endpoint pending for aggregated bookmarks.
   return apiFetch("/interactions/bookmarks/");
+};
+
+/**
+ * Fetches the authenticated user's liked stories and poems.
+ */
+export const getLikedContent = async () => {
+  return apiFetch("/interactions/likes/");
 };
 
 /**

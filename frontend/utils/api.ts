@@ -27,6 +27,16 @@ export const getToken = (): string | null => {
 };
 
 /**
+ * Retrieves the refresh token from localStorage.
+ */
+export const getRefreshToken = (): string | null => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("refresh_token");
+  }
+  return null;
+};
+
+/**
  * Clears tokens from localStorage
  */
 export const clearTokens = (): void => {
@@ -102,7 +112,7 @@ export const signupApi = async (
  * Token Refresh Utility (Optional but useful for full implementation)
  */
 export const refreshTokenApi = async () => {
-  const refreshToken = localStorage.getItem("refresh_token");
+  const refreshToken = getRefreshToken();
   if (!refreshToken) throw new Error("No refresh token found");
 
   const response = await fetch(`${API_BASE_URL}/accounts/refresh/`, {

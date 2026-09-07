@@ -7,8 +7,8 @@ import { apiFetch } from "./client";
  * @returns A list of poems or a paginated response from the backend.
  * @requiresAuthentication false
  */
-export const getPoems = async (query?: Record<string, string | number | boolean | undefined | null>) => {
-  return apiFetch("/poems/", { query });
+export const getPoems = async <T = unknown>(query?: Record<string, string | number | boolean | undefined | null>): Promise<T> => {
+  return apiFetch<T>("/poems/", { query });
 };
 
 /**

@@ -1,11 +1,51 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from stories.models import Story
 from .models import Like, Bookmark
 from .serializers import LikeSerializer, BookmarkSerializer
+
+
+def _content_payload(content, content_type):
+    return {
+        "content_id": content.id,
+        "content_type": content_type,
+        "title": content.title,
+        "author_name": content.author.username if content.author else None,
+        "genre_name": content.genre.name if content.genre else None,
+        "image": content.image.url if content.image else None,
+        "views": content.views,
+        "likes": content.likes,
+        "comments_count": content.comments_count,
+    }
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def bookmarked_content(request):
+    bookmarks = Bookmark.objects.filter(user=request.user).select_related(
+        "story__author", "story__genre", "poem__author", "poem__genre"
+    ).order_by("-created_at")
+    return Response([
+        _content_payload(bookmark.story, "story") if bookmark.story
+        else _content_payload(bookmark.poem, "poem")
+        for bookmark in bookmarks
+    ])
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def liked_content(request):
+    likes = Like.objects.filter(user=request.user).select_related(
+        "story__author", "story__genre", "poem__author", "poem__genre"
+    ).order_by("-created_at")
+    return Response([
+        _content_payload(like.story, "story") if like.story
+        else _content_payload(like.poem, "poem")
+        for like in likes
+    ])
 
 
 class LikeViewSet(viewsets.ViewSet):

@@ -6,8 +6,22 @@ import { apiFetch } from "./client";
  * @returns The current user's profile data.
  * @requiresAuthentication true
  */
-export const getCurrentUser = async () => {
-  return apiFetch("/accounts/me/");
+
+export interface Profile {
+  id: number;
+  username: string;
+  email: string;
+  bio: string | null;
+  location: string | null;
+  website: string | null;
+  profile_picture: string | null;
+  followers: number;
+  following: number;
+  works: number;
+}
+
+export const getCurrentUser = async (): Promise<Profile> => {
+  return apiFetch<Profile>("/accounts/me/");
 };
 
 /**
@@ -17,11 +31,15 @@ export const getCurrentUser = async () => {
  * @returns The updated profile data.
  * @requiresAuthentication true
  */
+/**
+ * Updates the authenticated user's profile fields.
+ */
 export const updateProfile = async (payload: Record<string, unknown>) => {
-  // TODO: Backend endpoint pending for profile updates.
-  return apiFetch("/accounts/me/", { method: "PATCH", body: payload });
+  return apiFetch("/accounts/me/", {
+    method: "PATCH",
+    body: payload,
+  });
 };
-
 /**
  * Uploads a profile image for the authenticated user.
  *

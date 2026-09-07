@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
-import { WritingDraft, ContentType, Phase } from "@/app/write/page";
+import React, { useRef, useEffect, useState } from "react";
+import { WritingDraft, ContentType, Phase, PublishErrors } from "@/app/write/page";
 
 interface WritingPhaseProps {
   draft: WritingDraft;
   onUpdateDraft: (updates: Partial<WritingDraft>) => void;
   onPhaseChange: (phase: Phase) => void;
   isSaving: boolean;
+  publishErrors: PublishErrors;
 }
 
 export default function WritingPhase({
@@ -15,9 +16,15 @@ export default function WritingPhase({
   onUpdateDraft,
   onPhaseChange,
   isSaving,
+  publishErrors,
 }: WritingPhaseProps) {
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+useEffect(() => {
+  setIsMounted(true);
+}, []);
 
   // Auto-expand textarea
   useEffect(() => {
@@ -44,6 +51,14 @@ export default function WritingPhase({
     .filter((w) => w.length > 0).length;
 
   const canContinue = draft.type && draft.title && draft.content;
+
+  useEffect(() => {
+    const firstInvalidField = publishErrors.type ? null : publishErrors.title ? titleRef.current : publishErrors.content ? contentRef.current : null;
+    if (firstInvalidField) {
+      firstInvalidField.scrollIntoView({ behavior: "smooth", block: "center" });
+      firstInvalidField.focus();
+    }
+  }, [publishErrors]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -84,6 +99,7 @@ export default function WritingPhase({
                    Poem
                 </button>
               </div>
+              {publishErrors.type && <p className="-mt-10 mb-8 text-sm text-red-600">{publishErrors.type}</p>}
             </div>
 
             {/* TITLE */}
@@ -97,6 +113,7 @@ export default function WritingPhase({
                   onChange={handleTitleChange}
                   className="w-full text-5xl pl-4 font-serif font-bold text-gray-900 border-l-4 border-gray-300 placeholder-gray-300 focus:outline-none mb-8 bg-transparent"
                 />
+                {publishErrors.title && <p className="mb-8 mt-2 text-sm text-red-600">{publishErrors.title}</p>}
 
                 {/* CONTENT */}
                 <textarea
@@ -111,6 +128,7 @@ export default function WritingPhase({
                   className="w-full text-lg leading-relaxed text-gray-800 placeholder-gray-400 focus:outline-none bg-transparent resize-none font-serif"
                   style={{ minHeight: "500px" }}
                 />
+                {publishErrors.content && <p className="mt-2 text-sm text-red-600">{publishErrors.content}</p>}
               </>
             )}
           </div>
@@ -132,16 +150,15 @@ export default function WritingPhase({
                 Saving...
               </span>
             )}
-            {!isSaving && draft.lastSaved && (
-              <span className="text-xs text-gray-400">
-                Saved at{" "}
-                {draft.lastSaved.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            )}
-
+           {isMounted && !isSaving && draft.lastSaved && (
+  <span className="text-xs text-gray-400">
+    Saved at{" "}
+    {draft.lastSaved.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}
+  </span>
+)}
           <div className="flex gap-3">
             <button className="px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors">
               Save as Draft

@@ -1,39 +1,33 @@
 "use client";
 
 import UniversalCard from "@/components/shared/UniversalCard";
+import type { ProfileContent } from "@/utils/profile.api";
+import EmptyTabState from "./EmptyTabState";
 
-const poems = [
-    { id: 1, title: "Echoes of Silence", author: "Clara M. Thorne", genre: "Romanticism", views: "45M", likes: 1200, comments: "1.2K", time: "2 days ago", image: "/images/covers/cover1.jpg" },
-    { id: 2, title: "Wilder Whispers", author: "Arlo Finch", genre: "Nature", views: "12M", likes: 1200, comments: "1.2K", time: "1 week ago", image: "/images/covers/cover2.jpg" },
-    { id: 3, title: "The Unseen Thread", author: "S. J. Sterling", genre: "Free Verse", views: "8.4M", likes: 1200, comments: "1.2K", time: "3 weeks ago", image: "/images/covers/cover3.jpg" },
-    { id: 4, title: "Ode to the Summit", author: "Gregory Vance", genre: "Epic", views: "2.1M", likes: 1200, comments: "1.2K", time: "1 month ago", image: "/images/covers/cover4.jpg" },
-    { id: 5, title: "Melodies of May", author: "Elena Rousseau", genre: "Lyric", views: "33M", likes: 1200, comments: "1.2K", time: "2 months ago", image: "/images/covers/cover5.jpg" },
-    { id: 6, title: "Concrete Pulse", author: "Leo Castelar", genre: "Modern", views: "6.3M", likes: 1200, comments: "1.2K", time: "3 months ago", image: "/images/covers/cover6.jpg" },
-];
+interface PoemsTabProps {
+  poems: ProfileContent[] | null;
+  loading: boolean;
+  error: string | null;
+}
 
-export default function PoemsTab() {
-    return (
-        <div>
-            <div className="flex items-center justify-between mb-8 border-b border-gray-200 pb-3">
-                <h2 className="font-serif font-bold text-xl text-black">All Poems</h2>
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{poems.length} Works</span>
-            </div>
+export default function PoemsTab({ poems, loading, error }: PoemsTabProps) {
+  if (loading) return <div className="py-16 text-center text-sm text-gray-500">Loading your poems...</div>;
+  if (error) return <div className="py-16 text-center text-sm text-red-500">{error}</div>;
+  if (!poems?.length) return <EmptyTabState message="You haven't posted any poems yet." actionLabel="Post a Poem" />;
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 lg:gap-8">
-                {poems.map((poem) => (
-                    <UniversalCard 
-                        key={poem.id}
-                        id={poem.id}
-                        title={poem.title}
-                        author={poem.author}
-                        genre={poem.genre}
-                        image={poem.image}
-                        views={poem.views}
-                        likes={poem.likes}
-                        comments={poem.comments}
-                    />
-                ))}
-            </div>
-        </div>
-    );
+  return <ContentGrid title="All Poems" items={poems} />;
+}
+
+function ContentGrid({ title, items }: { title: string; items: ProfileContent[] }) {
+  return (
+    <div>
+      <div className="mb-8 flex items-center justify-between border-b border-gray-200 pb-3">
+        <h2 className="font-serif text-xl font-bold text-black">{title}</h2>
+        <span className="text-xs font-bold uppercase tracking-widest text-gray-500">{items.length} Works</span>
+      </div>
+      <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 lg:gap-8">
+        {items.map((item) => <UniversalCard key={`${item.type}-${item.id}`} {...item} />)}
+      </div>
+    </div>
+  );
 }

@@ -48,11 +48,17 @@ class ProfileView(generics.RetrieveAPIView):
     def get(self, request):
         user = request.user
         return Response({
+            "id": user.id,
             "username": user.username,
             "email": user.email,
             "bio": user.bio,
+            "location": user.location,
+            "website": user.website,
+            "profile_picture": request.build_absolute_uri(user.profile_picture.url)
+            if user.profile_picture else None,
             "followers": user.followers_count,
             "following": user.following_count,
+            "works": user.total_poems + user.total_stories,
         })
 
 

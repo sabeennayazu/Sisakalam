@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { WritingDraft, Phase } from "@/app/write/page";
+import { WritingDraft, Phase, PublishErrors } from "@/app/write/page";
 import GenreSelector from "./GenreSelector";
 import TagInput from "./TagInput";
 import { fetchGenres, Genre } from "@/utils/api";
@@ -14,6 +14,9 @@ interface MetadataPhaseProps {
   onPublish: () => void;
   onSaveDraft: () => void;
   isSaving: boolean;
+  isPublishing: boolean;
+  publishErrors: PublishErrors;
+  publishSuccess: string | null;
 }
 
 export default function MetadataPhase({
@@ -23,16 +26,18 @@ export default function MetadataPhase({
   onPublish,
   onSaveDraft,
   isSaving,
+  isPublishing,
+  publishErrors,
+  publishSuccess,
 }: MetadataPhaseProps) {
   const [coverPreview, setCoverPreview] = useState<string | null>(
     draft.coverImage
   );
-  const [genres, setGenres] = useState<string[]>([]);
+  const [genres, setGenres] = useState<Genre[]>([]);
   const [genresLoading, setGenresLoading] = useState(false);
   const [genresError, setGenresError] = useState<string | null>(null);
 
   const isStory = draft.type === "story";
-  const isPoem = draft.type === "poem";
 
   // Fetch genres from backend whenever content type changes
   useEffect(() => {
@@ -45,7 +50,7 @@ export default function MetadataPhase({
     fetchGenres(draft.type)
       .then((data: Genre[]) => {
         if (!cancelled) {
-          setGenres(data.map((g) => g.name));
+          setGenres(data);
         }
       })
       .catch(() => {
@@ -73,8 +78,6 @@ export default function MetadataPhase({
       reader.readAsDataURL(file);
     }
   };
-
-  const canPublish = isStory ? draft.genre && draft.type : draft.type;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -178,24 +181,26 @@ export default function MetadataPhase({
 
           {/* RIGHT COLUMN - FORM */}
           <div className="md:col-span-2 space-y-8">
-            {/* GENRE (REQUIRED FOR STORIES, OPTIONAL FOR POEMS) */}
+            {/* GENRE */}
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-3">
-                Genre {isStory && <span className="text-red-500">*</span>}
+                Genre <span className="text-red-500">*</span>
               </label>
               <GenreSelector
-                options={genres}
+                options={genres.map((genre) => genre.name)}
                 value={draft.genre}
-                onChange={(val) => onUpdateDraft({ genre: val })}
+                onChange={(val) => {
+                  const selectedGenre = genres.find((genre) => genre.name === val);
+                  onUpdateDraft({ genre: val, genreId: selectedGenre?.id ?? null });
+                }}
                 placeholder={
                   genresLoading
                     ? "Loading genres..."
-                    : isStory
-                    ? "Select a genre"
-                    : "Select a genre (optional)"
+                    : "Select a genre"
                 }
                 disabled={genresLoading}
               />
+              {publishErrors.genre && <p className="mt-2 text-sm text-red-600">{publishErrors.genre}</p>}
               {genresError && (
                 <p className="text-xs text-red-500 mt-2">{genresError}</p>
               )}
@@ -227,6 +232,7 @@ export default function MetadataPhase({
                   rows={5}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black text-gray-900 placeholder-gray-500 resize-none"
                 />
+                {publishErrors.synopsis && <p className="mt-2 text-sm text-red-600">{publishErrors.synopsis}</p>}
                 <p className="text-xs text-gray-500 mt-2">
                   {draft.synopsis.length} characters
                 </p>
@@ -318,6 +324,12 @@ export default function MetadataPhase({
 
         {/* ACTION BUTTONS */}
         <div className="mt-12 border-t border-gray-200 pt-8">
+          {publishErrors.general && (
+            <p className="mb-4 text-sm text-red-600" role="alert">
+              {publishErrors.general}
+            </p>
+          )}
+          {publishSuccess && <p className="mb-4 text-sm text-green-600" role="status">{publishSuccess}</p>}
           <div className="flex gap-4 justify-between">
             <button
               onClick={() => onPhaseChange("writing")}
@@ -335,10 +347,10 @@ export default function MetadataPhase({
               </button>
               <button
                 onClick={onPublish}
-                disabled={!canPublish || isSaving}
+                disabled={isPublishing}
                 className="px-8 py-3 font-medium text-white bg-black hover:bg-gray-900 disabled:bg-gray-300 rounded-full transition-colors"
               >
-                {isSaving
+                {isPublishing
                   ? "Publishing..."
                   : `Publish ${isStory ? "Story" : "Poem"}`}
               </button>
