@@ -19,6 +19,7 @@ def _content_payload(content, content_type):
         "views": content.views,
         "likes": content.likes,
         "comments_count": content.comments_count,
+        "is_mature": content.is_mature,
     }
 
 

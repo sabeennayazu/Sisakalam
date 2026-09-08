@@ -7,6 +7,7 @@ interface WritingPhaseProps {
   draft: WritingDraft;
   onUpdateDraft: (updates: Partial<WritingDraft>) => void;
   onPhaseChange: (phase: Phase) => void;
+  onSaveDraft: () => void;
   isSaving: boolean;
   publishErrors: PublishErrors;
 }
@@ -15,6 +16,7 @@ export default function WritingPhase({
   draft,
   onUpdateDraft,
   onPhaseChange,
+  onSaveDraft,
   isSaving,
   publishErrors,
 }: WritingPhaseProps) {
@@ -160,8 +162,12 @@ useEffect(() => {
   </span>
 )}
           <div className="flex gap-3">
-            <button className="px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors">
-              Save as Draft
+            <button
+              onClick={onSaveDraft}
+              disabled={isSaving || !draft.type}
+              className="px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-300 rounded-full transition-colors"
+            >
+              {isSaving ? "Saving..." : "Save as Draft"}
             </button>
             <button
               onClick={() => onPhaseChange("metadata")}

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import WritingPhase from "@/components/Writing/WritingPhase";
 import MetadataPhase from "@/components/Writing/MetadataPhase";
-import { createPoem } from "@/utils/poems.api";
-import { createStory } from "@/utils/stories.api";
+import { startPublishing, startSaving } from "@/components/loader/UploadModal";
 
 export type ContentType = "story" | "poem";
 export type Phase = "writing" | "metadata";
@@ -29,6 +29,7 @@ export interface WritingDraft {
 const DRAFT_STORAGE_KEY = "writing-draft";
 
 export default function WritePage() {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("writing");
   const [draft, setDraft] = useState<WritingDraft>({
     id: Date.now().toString(),
@@ -120,65 +121,57 @@ export default function WritePage() {
       return;
     }
 
+    const contentType = draft.type;
+    if (!contentType) return;
+
     setIsPublishing(true);
     setPublishErrors({});
     setPublishSuccess(null);
 
-    try {
-      if (draft.type === "poem") {
-        await createPoem({
-          title: draft.title.trim(),
+    const payload = contentType === "poem"
+      ? { title: draft.title.trim(), content: draft.content, genre: draft.genreId, tags: draft.tags, is_mature: draft.matureContent, status: "published" }
+      : { title: draft.title.trim(), synopsis: draft.synopsis.trim(), genre: draft.genreId, tags: draft.tags, is_mature: draft.matureContent, status: "published" };
+
+    startPublishing({ type: contentType, payload });
+    router.back();
+  };
+
+  const handleSaveDraft = async () => {
+    if (isSaving || !draft.type) return;
+
+    const payload = draft.type === "poem"
+      ? {
+          title: draft.title.trim() || "Untitled Poem",
           content: draft.content,
           genre: draft.genreId,
           tags: draft.tags,
           is_mature: draft.matureContent,
-          status: "published",
-        });
-      } else {
-        await createStory({
-          title: draft.title.trim(),
+          status: "draft",
+        }
+      : {
+          title: draft.title.trim() || "Untitled Story",
           synopsis: draft.synopsis.trim(),
           genre: draft.genreId,
           tags: draft.tags,
           is_mature: draft.matureContent,
-          status: "published",
-        });
-      }
+          status: "draft",
+        };
 
-      localStorage.removeItem(DRAFT_STORAGE_KEY);
-      setPublishSuccess(`${draft.type === "poem" ? "Poem" : "Story"} published successfully.`);
-    } catch (error: unknown) {
-      const details = error && typeof error === "object" && "details" in error
-        ? (error as { details?: unknown }).details
-        : null;
-      const backendErrors: PublishErrors = {};
-      if (details && typeof details === "object") {
-        const responseDetails = details as Record<string, unknown>;
-        for (const field of ["title", "content", "genre", "synopsis"] as const) {
-          const value = responseDetails[field];
-          if (Array.isArray(value) && value.length > 0) backendErrors[field] = String(value[0]);
-          else if (typeof value === "string") backendErrors[field] = value;
-        }
-        const general = responseDetails.detail ?? responseDetails.message;
-        if (typeof general === "string") backendErrors.general = general;
-      }
-      setPublishErrors(
-        Object.keys(backendErrors).length > 0
-          ? backendErrors
-          : { general: error instanceof Error ? error.message : "Unable to publish. Please try again." }
-      );
-    } finally {
-      setIsPublishing(false);
-    }
-  };
-
-  const handleSaveDraft = async () => {
     setIsSaving(true);
-    // TODO: Send to backend API for persistent storage
-    setTimeout(() => {
-      setIsSaving(false);
-      alert("Draft saved! (Mock)");
-    }, 500);
+    startSaving({
+      type: draft.type,
+      payload,
+      onSuccess: (result) => {
+        if (result && typeof result === "object" && "id" in result) {
+          setDraft((current) => ({
+            ...current,
+            id: String(result.id),
+            lastSaved: new Date(),
+          }));
+        }
+      },
+      onSettled: () => setIsSaving(false),
+    });
   };
 
   return (
@@ -188,6 +181,7 @@ export default function WritePage() {
           draft={draft}
           onUpdateDraft={handleUpdateDraft}
           onPhaseChange={setPhase}
+          onSaveDraft={handleSaveDraft}
           isSaving={isSaving}
           publishErrors={publishErrors}
         />

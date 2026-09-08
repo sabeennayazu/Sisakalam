@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Inter, Playfair_Display } from "next/font/google";
 import Navbar from "@/components/Navbar/Navbar";
+import UploadModal from "@/components/loader/UploadModal";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const playfair = Playfair_Display({
@@ -22,6 +23,7 @@ export default function RootLayout({
       <body className="">
         <Navbar />
         {children}
+        <UploadModal />
       </body>
     </html>
   );

@@ -1,4 +1,4 @@
-import { Eye, Heart, MessageCircle } from "lucide-react";
+import { Eye, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import LikeButton from "@/components/interactions/LikeButton";
 import BookmarkButton from "@/components/interactions/BookmarkButton";
 
@@ -25,6 +25,11 @@ export interface UniversalCardProps {
     // UI options
     showBookmark?: boolean;
     showStats?: boolean;
+    isMature?: boolean;
+    status?: "draft" | "published" | string;
+    savedAt?: string | Date;
+    onEdit?: (event: React.MouseEvent) => void;
+    onDelete?: (event: React.MouseEvent) => void;
     
     // Flexible props for future use
     description?: string;
@@ -49,6 +54,11 @@ export default function UniversalCard({
     onToggleSelect,
     showBookmark = true,
     showStats = true,
+    isMature = false,
+    status = "published",
+    savedAt,
+    onEdit,
+    onDelete,
     description,
     tags,
     onClick,
@@ -57,6 +67,8 @@ export default function UniversalCard({
     // Convert numeric values to strings if needed
     const formattedViews = typeof views === "number" ? views.toString() : views || "0";
     const formattedComments = typeof comments === "number" ? comments.toString() : comments || "0";
+    const isDraft = status === "draft";
+    const savedTime = savedAt ? formatSavedTime(savedAt) : "just now";
 
     return (
         <div
@@ -94,7 +106,7 @@ export default function UniversalCard({
                 />
 
                 {/* Bookmark Button - Top Right */}
-                {showBookmark && !selectionMode && (
+                {showBookmark && !selectionMode && !isDraft && (
                     <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-black/20 rounded-full p-1.5 md:p-2 shadow-md hover:shadow-lg transition">
                         <BookmarkButton storyId={id} />
                     </div>
@@ -104,13 +116,18 @@ export default function UniversalCard({
             {/* Genre Badge & Optional Type */}
             <div className="flex items-center gap-2 mb-2">
                 {genre && (
-                    <span className="text-[10px] md:text-xs px-2 md:px-3 py-0.5 md:py-1 bg-gray-100 rounded-full text-gray-700 truncate">
+                    <span className="text-[10px] md:text-xs px-2 md:px-3 py-0.5 md:py-1 bg-gray-200 rounded-full text-gray-700 truncate">
                         {genre}
                     </span>
                 )}
                 {type && (
                     <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider whitespace-nowrap">
                         {type}
+                    </span>
+                )}
+                {isMature && (
+                    <span className="rounded-2xl bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                        NSFW
                     </span>
                 )}
             </div>
@@ -146,8 +163,39 @@ export default function UniversalCard({
                 </div>
             )}
 
+            {/* Draft management */}
+            {isDraft && (
+                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                    <span className="text-[10px] font-medium text-gray-400">Saved {savedTime}</span>
+                    <div className="flex items-center gap-1">
+                        {onEdit && (
+                            <button
+                                type="button"
+                                onClick={onEdit}
+                                className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-black"
+                                title="Edit draft"
+                                aria-label="Edit draft"
+                            >
+                                <Pencil size={14} />
+                            </button>
+                        )}
+                        {onDelete && (
+                            <button
+                                type="button"
+                                onClick={onDelete}
+                                className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                                title="Delete draft"
+                                aria-label="Delete draft"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Stats (Views, Likes, Comments) */}
-            {showStats && (
+            {!isDraft && showStats && (
                 <div className="flex items-center justify-between text-xs text-gray-500 mt-3 pr-2">
                     <div className="flex items-center gap-1">
                         <Eye size={14} />
@@ -167,4 +215,16 @@ export default function UniversalCard({
             {children && <div className="mt-2">{children}</div>}
         </div>
     );
+}
+
+function formatSavedTime(value: string | Date) {
+    const elapsed = Math.max(0, Date.now() - new Date(value).getTime());
+    const minutes = Math.floor(elapsed / 60000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return "yesterday";
+    return `${days} days ago`;
 }

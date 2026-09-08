@@ -107,6 +107,11 @@ class StoryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = self.queryset
+        if self.action in {"update", "partial_update", "destroy", "publish", "unpublish"}:
+            if not self.request.user.is_authenticated:
+                return Story.objects.none()
+            return queryset.filter(author=self.request.user).order_by("-created_at")
+
         if self.action in {"mine", "drafts"}:
             if not self.request.user.is_authenticated:
                 return Story.objects.none()

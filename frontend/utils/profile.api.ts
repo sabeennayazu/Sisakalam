@@ -15,6 +15,7 @@ export interface ProfileContent {
   views: number;
   likes: number;
   comments: number;
+  isMature: boolean;
 }
 
 interface CollectionResponse<T> {
@@ -30,6 +31,7 @@ interface ContentRecord {
   views: number;
   likes: number;
   comments_count: number;
+  is_mature: boolean;
 }
 
 interface InteractionContentRecord {
@@ -42,6 +44,7 @@ interface InteractionContentRecord {
   views: number;
   likes: number;
   comments_count: number;
+  is_mature: boolean;
 }
 
 const asCollection = <T>(response: T[] | CollectionResponse<T>): T[] => {
@@ -74,6 +77,7 @@ const mapContent = (item: ContentRecord, type: ProfileContentType): ProfileConte
   views: item.views,
   likes: item.likes,
   comments: item.comments_count,
+  isMature: item.is_mature,
 });
 
 const mapInteractionContent = (item: InteractionContentRecord): ProfileContent => ({
@@ -86,6 +90,7 @@ const mapInteractionContent = (item: InteractionContentRecord): ProfileContent =
   views: item.views,
   likes: item.likes,
   comments: item.comments_count,
+  isMature: item.is_mature,
 });
 
 export const getMyPoems = async (): Promise<ProfileContent[]> => {
@@ -100,10 +105,10 @@ export const getMyStories = async (): Promise<ProfileContent[]> => {
 
 export const getSavedProfileContent = async (): Promise<ProfileContent[]> => {
   const response = await getBookmarks();
-  return asCollection(response).map(mapInteractionContent);
+  return asCollection(response as InteractionContentRecord[]).map(mapInteractionContent);
 };
 
 export const getLikedProfileContent = async (): Promise<ProfileContent[]> => {
   const response = await getLikedContent();
-  return asCollection(response).map(mapInteractionContent);
+  return asCollection(response as InteractionContentRecord[]).map(mapInteractionContent);
 };

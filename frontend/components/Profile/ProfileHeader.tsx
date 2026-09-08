@@ -5,9 +5,12 @@ import { MapPin, Link2, Settings } from "lucide-react";
 import Link from "next/link";
 import { getCurrentUser } from "@/utils/account.api";
 import type { Profile } from "@/utils/account.api";
+import { getMyPoems, getMyStories } from "@/utils/profile.api";
 
 export default function ProfileHeader() {
     const [profile, setProfile] = useState<Profile | null>(null);
+    const [totalPoems, setTotalPoems] = useState(0);
+    const [totalStories, setTotalStories] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +29,21 @@ export default function ProfileHeader() {
         };
 
         loadProfile();
+    }, []);
+
+    useEffect(() => {
+        const loadWorks = async () => {
+            try {
+                const [poems, stories] = await Promise.all([getMyPoems(), getMyStories()]);
+                setTotalPoems(poems.length);
+                setTotalStories(stories.length);
+            } catch {
+                setTotalPoems(0);
+                setTotalStories(0);
+            }
+        };
+
+        loadWorks();
     }, []);
 
     // Loading state
@@ -193,7 +211,7 @@ export default function ProfileHeader() {
                 {/* Works */}
                 <div className="flex flex-col items-center">
                     <span className="text-xl font-bold text-black">
-                        {profile.works.toLocaleString()}
+                        {(totalPoems + totalStories).toLocaleString()}
                     </span>
 
                     <span className="text-[10px] text-gray-500 uppercase tracking-widest mt-1 font-bold">
