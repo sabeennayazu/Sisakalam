@@ -32,12 +32,15 @@ class StorySerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField(read_only=True)
     genre_name = serializers.SerializerMethodField(read_only=True)
     chapter_count = serializers.SerializerMethodField(read_only=True)
+    content = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    first_chapter_slug = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Story
         fields = [
             "id", "title", "synopsis", "author", "author_name", "genre", "genre_name",
-            "tags", "tag_names", "image", "is_mature", "status", "published_at",
+            "tags", "tag_names", "image", "is_mature", "is_private", "status", "published_at",
+            "content", "first_chapter_slug",
             "chapter_count", "views", "likes", "comments_count", "favorites_count",
             "created_at", "updated_at"
         ]
@@ -55,11 +58,20 @@ class StorySerializer(serializers.ModelSerializer):
     def get_chapter_count(self, obj):
         return obj.chapters.count()
 
+    def get_first_chapter_slug(self, obj):
+        chapter = obj.chapters.order_by("order").first()
+        return chapter.slug if chapter else None
+
     def create(self, validated_data):
         tags_data = validated_data.pop("tags", [])
+        content = validated_data.pop("content", "")
         request = self.context.get("request")
         story = Story.objects.create(author=request.user, **validated_data)
         self._sync_tags(story, tags_data)
+        if content:
+            Chapter.objects.create(story=story, title=story.title, chapter_number=1, order=1, content=content)
+        if story.status == StoryStatus.PUBLISHED:
+            story.publish()
         return story
 
     def update(self, instance, validated_data):
@@ -124,7 +136,7 @@ class StoryViewSet(viewsets.ModelViewSet):
         if self.request.user.is_authenticated and self.request.query_params.get("mine") == "1":
             return queryset.filter(author=self.request.user).order_by("-created_at")
 
-        queryset = queryset.filter(status=StoryStatus.PUBLISHED)
+        queryset = queryset.filter(status=StoryStatus.PUBLISHED, is_private=False)
 
         search = self.request.query_params.get("q", "").strip()
         if search:
@@ -201,6 +213,8 @@ class StoryViewSet(viewsets.ModelViewSet):
         if story.status == StoryStatus.PUBLISHED:
             return Response({"detail": "Story is already published."}, status=status.HTTP_400_BAD_REQUEST)
         story.publish()
+        if not story.chapters.exists():
+            Chapter.objects.create(story=story, title=story.title, chapter_number=1, order=1, content="")
         return Response(self.get_serializer(story).data)
 
     @action(detail=True, methods=["post"], url_path="unpublish")
@@ -234,7 +248,7 @@ class AuthorStoryListView(ListAPIView):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-        return Story.objects.filter(author_id=self.kwargs["author_id"], status=StoryStatus.PUBLISHED).select_related("author", "genre").prefetch_related("tags").order_by("-created_at")
+        return Story.objects.filter(author_id=self.kwargs["author_id"], status=StoryStatus.PUBLISHED, is_private=False).select_related("author", "genre").prefetch_related("tags").order_by("-created_at")
 
 
 class ChapterSerializer(serializers.ModelSerializer):
@@ -250,7 +264,7 @@ class StoryChapterListCreateAPIView(ListCreateAPIView):
 
     def get_queryset(self):
         story = get_object_or_404(Story, pk=self.kwargs["story_id"])
-        if story.status != StoryStatus.PUBLISHED and (not self.request.user.is_authenticated or story.author_id != self.request.user.id):
+        if (story.status != StoryStatus.PUBLISHED or story.is_private) and (not self.request.user.is_authenticated or story.author_id != self.request.user.id):
             raise Http404
         return story.chapters.all()
 
@@ -267,7 +281,7 @@ class StoryChapterDetailAPIView(RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         story = get_object_or_404(Story, pk=self.kwargs["story_id"])
-        if story.status != StoryStatus.PUBLISHED and (not self.request.user.is_authenticated or story.author_id != self.request.user.id):
+        if (story.status != StoryStatus.PUBLISHED or story.is_private) and (not self.request.user.is_authenticated or story.author_id != self.request.user.id):
             raise Http404
         return story.chapters.all()
 
@@ -289,7 +303,7 @@ class StoryChapterBySlugAPIView(RetrieveAPIView):
 
     def get_queryset(self):
         story = get_object_or_404(Story, pk=self.kwargs["story_id"])
-        if story.status != StoryStatus.PUBLISHED:
+        if story.status != StoryStatus.PUBLISHED or story.is_private:
             raise Http404
         return story.chapters.all()
 

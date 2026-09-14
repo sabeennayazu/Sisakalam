@@ -1,7 +1,7 @@
 "use client";
 
 import PoemStats from "@/components/Poems/PoemStats";
-import ReviewsSection from "@/components/Stories/ReviewsSection";
+import ReviewsSection from "@/components/Poems/PoemReviewsSection";
 import Tags from "@/components/Poems/Tags";
 
 interface PoemDetailsSidebarProps {

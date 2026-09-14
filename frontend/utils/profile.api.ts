@@ -2,12 +2,15 @@ import { API_BASE_URL } from "./api";
 import { getBookmarks, getLikedContent } from "./interactions.api";
 import { getPoems } from "./poems.api";
 import { getStories } from "./stories.api";
+import { deletePoem, updatePoem } from "./poems.api";
+import { deleteStory, updateStory } from "./stories.api";
 
 export type ProfileContentType = "poem" | "story";
 
 export interface ProfileContent {
   id: number;
   authorId?: number;
+  chapterSlug?: string | null;
   type: ProfileContentType;
   title: string;
   author: string;
@@ -17,6 +20,7 @@ export interface ProfileContent {
   likes: number;
   comments: number;
   isMature: boolean;
+  isPrivate: boolean;
 }
 
 interface CollectionResponse<T> {
@@ -26,19 +30,24 @@ interface CollectionResponse<T> {
 interface ContentRecord {
   id: number;
   author: number;
+  first_chapter_slug?: string | null;
   title: string;
   author_name: string | null;
+  author_id?: number;
   genre_name: string | null;
   image: string | null;
   views: number;
   likes: number;
   comments_count: number;
   is_mature: boolean;
+  is_private?: boolean;
 }
 
 interface InteractionContentRecord {
   content_id: number;
   content_type: ProfileContentType;
+  author_id?: number;
+  chapter_slug?: string | null;
   title: string;
   author_name: string | null;
   genre_name: string | null;
@@ -47,6 +56,7 @@ interface InteractionContentRecord {
   likes: number;
   comments_count: number;
   is_mature: boolean;
+  is_private?: boolean;
 }
 
 const asCollection = <T>(response: T[] | CollectionResponse<T>): T[] => {
@@ -72,6 +82,7 @@ const absoluteImageUrl = (image: string | null): string => {
 const mapContent = (item: ContentRecord, type: ProfileContentType): ProfileContent => ({
   id: item.id,
   authorId: item.author,
+  chapterSlug: item.first_chapter_slug,
   type,
   title: item.title,
   author: item.author_name ?? "Unknown author",
@@ -81,10 +92,13 @@ const mapContent = (item: ContentRecord, type: ProfileContentType): ProfileConte
   likes: item.likes,
   comments: item.comments_count,
   isMature: item.is_mature,
+  isPrivate: item.is_private ?? false,
 });
 
 const mapInteractionContent = (item: InteractionContentRecord): ProfileContent => ({
   id: item.content_id,
+  authorId: item.author_id,
+  chapterSlug: item.chapter_slug,
   type: item.content_type,
   title: item.title,
   author: item.author_name ?? "Unknown author",
@@ -94,6 +108,7 @@ const mapInteractionContent = (item: InteractionContentRecord): ProfileContent =
   likes: item.likes,
   comments: item.comments_count,
   isMature: item.is_mature,
+  isPrivate: item.is_private ?? false,
 });
 
 export const getMyPoems = async (): Promise<ProfileContent[]> => {
@@ -124,4 +139,15 @@ export const getSavedProfileContent = async (): Promise<ProfileContent[]> => {
 export const getLikedProfileContent = async (): Promise<ProfileContent[]> => {
   const response = await getLikedContent();
   return asCollection(response as InteractionContentRecord[]).map(mapInteractionContent);
+};
+
+export const deleteProfileContent = async (item: ProfileContent) => {
+  if (item.type === "poem") await deletePoem(item.id);
+  else await deleteStory(item.id);
+};
+
+export const toggleProfileContentPrivacy = async (item: ProfileContent) => {
+  const payload = { is_private: !item.isPrivate };
+  if (item.type === "poem") await updatePoem(item.id, payload);
+  else await updateStory(item.id, payload);
 };

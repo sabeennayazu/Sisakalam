@@ -117,7 +117,6 @@ export const getLikedContent = async () => {
  * @requiresAuthentication true
  */
 export const createComment = async (payload: Record<string, unknown>) => {
-  // TODO: Backend endpoint pending for comment creation.
   return apiFetch("/interactions/comments/", { method: "POST", body: payload });
 };
 
@@ -142,7 +141,6 @@ export const updateComment = async (commentId: string | number, payload: Record<
  * @requiresAuthentication true
  */
 export const deleteComment = async (commentId: string | number) => {
-  // TODO: Backend endpoint pending for comment deletion.
   return apiFetch(`/interactions/comments/${commentId}/`, { method: "DELETE" });
 };
 
@@ -155,8 +153,7 @@ export const deleteComment = async (commentId: string | number) => {
  * @requiresAuthentication false
  */
 export const getComments = async (targetType: string, targetId: string | number) => {
-  // TODO: Backend endpoint pending for comment listing.
-  return apiFetch("/interactions/comments/", { query: { target_type: targetType, target_id: targetId } });
+  return apiFetch("/interactions/comments/", { query: { [targetType]: targetId } });
 };
 
 /**

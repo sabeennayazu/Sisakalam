@@ -129,8 +129,8 @@ export default function WritePage() {
     setPublishSuccess(null);
 
     const payload = contentType === "poem"
-      ? { title: draft.title.trim(), content: draft.content, genre: draft.genreId, tags: draft.tags, is_mature: draft.matureContent, status: "published" }
-      : { title: draft.title.trim(), synopsis: draft.synopsis.trim(), genre: draft.genreId, tags: draft.tags, is_mature: draft.matureContent, status: "published" };
+      ? { title: draft.title.trim(), content: draft.content, genre: draft.genreId, tags: draft.tags, is_mature: draft.matureContent, is_private: draft.visibility === "private", status: "published" }
+      : { title: draft.title.trim(), content: draft.content, synopsis: draft.synopsis.trim(), genre: draft.genreId, tags: draft.tags, is_mature: draft.matureContent, is_private: draft.visibility === "private", status: "published" };
 
     startPublishing({ type: contentType, payload });
     router.back();
@@ -146,6 +146,7 @@ export default function WritePage() {
           genre: draft.genreId,
           tags: draft.tags,
           is_mature: draft.matureContent,
+          is_private: draft.visibility === "private",
           status: "draft",
         }
       : {
@@ -154,6 +155,7 @@ export default function WritePage() {
           genre: draft.genreId,
           tags: draft.tags,
           is_mature: draft.matureContent,
+          is_private: draft.visibility === "private",
           status: "draft",
         };
 

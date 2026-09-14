@@ -38,6 +38,7 @@ export interface ContentApiRecord {
   genre_name: string | null;
   image: string | null;
   is_mature: boolean;
+  is_private: boolean;
   status: "draft" | "published" | string;
   published_at: string | null;
   views: number;
@@ -52,6 +53,7 @@ export interface ContentApiRecord {
 export interface StoryApiRecord extends ContentApiRecord {
   synopsis: string;
   chapter_count: number;
+  first_chapter_slug: string | null;
 }
 
 export interface PoemApiRecord extends ContentApiRecord {

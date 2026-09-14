@@ -6,12 +6,13 @@ import { createPoem, saveDraft as savePoemDraft } from "@/utils/poems.api";
 import { createStory, saveDraft as saveStoryDraft } from "@/utils/stories.api";
 
 export type PublishingContentType = "story" | "poem";
-type TaskOperation = "publish" | "save";
+type TaskOperation = "publish" | "save" | "copy-link";
 
 interface PublishingTaskInput {
 	type: PublishingContentType;
 	payload: Record<string, unknown>;
 	operation?: TaskOperation;
+	url?: string;
 	onSuccess?: (result: unknown) => void;
 	onSettled?: () => void;
 }
@@ -41,9 +42,16 @@ const updateTask = (updates: Partial<PublishingTask>) => {
 const getErrorMessage = (error: unknown) =>
 	error instanceof Error ? error.message : "We could not publish your work. Please try again.";
 
-const startTask = ({ type, payload, operation = "publish" }: PublishingTaskInput) => {
-	activeTask = { type, payload, operation, status: "uploading", error: null, result: null };
+const startTask = ({ type, payload, operation = "publish", url }: PublishingTaskInput) => {
+	activeTask = { type, payload, operation, url, status: "uploading", error: null, result: null };
 	notify();
+
+	if (operation === "copy-link") {
+		void navigator.clipboard.writeText(url ?? window.location.href)
+			.then(() => updateTask({ status: "success", result: { title: "Link copied" } }))
+			.catch((error: unknown) => updateTask({ status: "failure", error: getErrorMessage(error) }));
+		return;
+	}
 
 	const request = operation === "save"
 		? type === "poem" ? savePoemDraft(payload) : saveStoryDraft(payload)
@@ -62,6 +70,7 @@ const startTask = ({ type, payload, operation = "publish" }: PublishingTaskInput
 
 export const startPublishing = (input: PublishingTaskInput) => startTask({ ...input, operation: "publish" });
 export const startSaving = (input: PublishingTaskInput) => startTask({ ...input, operation: "save" });
+export const startCopyLink = (url: string) => startTask({ type: "story", payload: { title: "Link copied" }, operation: "copy-link", url });
 
 const subscribe = (listener: TaskListener) => {
 	listeners.add(listener);
@@ -92,6 +101,7 @@ export default function UploadModal() {
 	if (!task) return null;
 
 	const label = task.type === "story" ? "story" : "poem";
+	const isCopying = task.operation === "copy-link";
 	const title = getPublishedTitle(task.result, task.payload.title as string);
 	const isSaving = task.operation === "save";
 
@@ -117,16 +127,16 @@ export default function UploadModal() {
 					<div className="min-w-0 flex-1">
 						<div className="flex flex-wrap items-center gap-2">
 							<h2 className="font-serif text-base font-bold text-gray-900 md:text-lg">
-								{task.status === "uploading" && (isSaving ? `Saving your ${label} draft...` : `Your ${label} is uploading...`)}
-								{task.status === "success" && (isSaving ? `Your ${label} draft has been saved` : `Your ${label} has been published`)}
-								{task.status === "failure" && (isSaving ? `Your ${label} draft could not be saved` : `Your ${label} could not be published`)}
+								{task.status === "uploading" && (isCopying ? "Copying link..." : isSaving ? `Saving your ${label} draft...` : `Your ${label} is uploading...`)}
+								{task.status === "success" && (isCopying ? "Link copied" : isSaving ? `Your ${label} draft has been saved` : `Your ${label} has been published`)}
+								{task.status === "failure" && (isCopying ? "Could not copy link" : isSaving ? `Your ${label} draft could not be saved` : `Your ${label} could not be published`)}
 							</h2>
 							<span className="bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">
 								{title || label}
 							</span>
 						</div>
 
-						{task.status === "uploading" && (
+						{task.status === "uploading" && !isCopying && (
 							<div className="mt-2 flex items-center gap-3">
 								<div className="h-1.5 w-full max-w-64 overflow-hidden rounded-full bg-gray-200">
 									<div className="h-full w-2/3 animate-pulse rounded-full bg-black" />
@@ -137,7 +147,7 @@ export default function UploadModal() {
 						{task.status === "failure" && <p className="mt-1 text-sm text-red-600">{task.error}</p>}
 					</div>
 
-					{task.status === "success" && !isSaving && (
+					{task.status === "success" && !isSaving && !isCopying && (
 						<div className="hidden items-center gap-3 md:flex">
 							<button type="button" className="flex items-center gap-2 bg-slate-100 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-slate-200">
 								<Copy size={14} /> Copy Link

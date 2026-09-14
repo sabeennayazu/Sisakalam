@@ -98,6 +98,7 @@ export default function PoemsPage() {
                 id={poem.id}
                 title={poem.title}
                 author={poem.author_name ?? "Unknown author"}
+                authorId={poem.author}
                 genre={poem.genre_name ?? ""}
                 image={getMediaUrl(poem.image)}
                 views={poem.views}
@@ -106,6 +107,7 @@ export default function PoemsPage() {
                 type="poem"
                 isMature={poem.is_mature}
                 status={poem.status}
+                isPrivate={poem.is_private}
                 description={poem.content}
                 tags={poem.tag_names}
               />

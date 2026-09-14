@@ -34,7 +34,7 @@ class PoemSerializer(serializers.ModelSerializer):
         model = Poem
         fields = [
             "id", "title", "content", "author", "author_name", "genre", "genre_name",
-            "tags", "tag_names", "image", "is_mature", "status", "published_at",
+            "tags", "tag_names", "image", "is_mature", "is_private", "status", "published_at",
             "views", "likes", "comments_count", "favorites_count", "created_at", "updated_at"
         ]
         read_only_fields = ["id", "author", "author_name", "genre_name", "tag_names", "published_at", "created_at", "updated_at", "views", "likes", "comments_count", "favorites_count"]
@@ -100,7 +100,7 @@ class PoemViewSet(viewsets.ModelViewSet):
         if self.request.user.is_authenticated and self.request.query_params.get("mine") == "1":
             return queryset.filter(author=self.request.user).order_by("-created_at")
 
-        queryset = queryset.filter(status=PoemStatus.PUBLISHED)
+        queryset = queryset.filter(status=PoemStatus.PUBLISHED, is_private=False)
 
         search = self.request.query_params.get("q", "").strip()
         if search:

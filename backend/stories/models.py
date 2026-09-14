@@ -66,6 +66,7 @@ class Story(models.Model):
     )
 
     is_mature = models.BooleanField(default=False)
+    is_private = models.BooleanField(default=False)
 
     status = models.CharField(
         max_length=10,
@@ -94,6 +95,14 @@ class Story(models.Model):
         self.status = StoryStatus.PUBLISHED
         self.published_at = timezone.now()
         self.save()
+        if not self.chapters.exists():
+            Chapter.objects.create(
+                story=self,
+                title=self.title,
+                chapter_number=1,
+                order=1,
+                content="",
+            )
 
     def __str__(self):
         return self.title

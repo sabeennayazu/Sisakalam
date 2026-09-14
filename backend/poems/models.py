@@ -39,6 +39,7 @@ class Poem(models.Model):
     )
 
     is_mature = models.BooleanField(default=False)
+    is_private = models.BooleanField(default=False)
 
     status = models.CharField(
         max_length=10,

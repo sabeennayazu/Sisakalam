@@ -98,6 +98,8 @@ export default function StoriesPage() {
                 id={story.id}
                 title={story.title}
                 author={story.author_name ?? "Unknown author"}
+                authorId={story.author}
+                chapterSlug={story.first_chapter_slug}
                 genre={story.genre_name ?? ""}
                 image={getMediaUrl(story.image)}
                 views={story.views}
@@ -106,6 +108,7 @@ export default function StoriesPage() {
                 type="story"
                 isMature={story.is_mature}
                 status={story.status}
+                isPrivate={story.is_private}
                 description={story.synopsis}
                 tags={story.tag_names}
               />

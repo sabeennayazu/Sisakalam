@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getStory, getStoryChapterBySlug, getStoryChapters } from "@/utils/stories.api";
 import type { ChapterApiRecord, StoryApiRecord } from "@/types";
+import ContentComments from "@/components/Comments/ContentComments";
 
 interface PageProps { params: Promise<{ id: string; chapterSlug: string }> }
 
@@ -65,6 +66,7 @@ export default function ChapterReadingPage({ params }: PageProps) {
           {next ? <Link href={`/stories/${story.id}/${next.slug}`} className="text-sm font-semibold text-gray-700 hover:text-black">Next chapter</Link> : <Link href={`/stories/${story.id}`} className="text-sm font-semibold text-gray-700 hover:text-black">Back to story</Link>}
         </nav>
       </article>
+      <aside className="mx-auto grid max-w-3xl gap-6 px-6 pb-16 md:px-10"><div className="border border-gray-200 bg-white p-5 shadow-sm"><h2 className="text-lg font-semibold text-black">Reviews</h2><p className="mt-2 text-sm text-gray-500">Reviews are not available yet.</p></div><ContentComments type="story" contentId={story.id} /></aside>
     </main>
   );
 }

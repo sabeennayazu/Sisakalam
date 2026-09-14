@@ -9,17 +9,20 @@ interface PoemsTabProps {
   loading: boolean;
   error: string | null;
   isOwner: boolean;
+  viewerId: number;
+  onDelete: (item: ProfileContent) => Promise<void>;
+  onTogglePrivacy: (item: ProfileContent) => Promise<void>;
 }
 
-export default function PoemsTab({ poems, loading, error, isOwner }: PoemsTabProps) {
+export default function PoemsTab({ poems, loading, error, isOwner, viewerId, onDelete, onTogglePrivacy }: PoemsTabProps) {
   if (loading) return <div className="py-16 text-center text-sm text-gray-500">Loading {isOwner ? "your" : "this user's"} poems...</div>;
   if (error) return <div className="py-16 text-center text-sm text-red-500">{error}</div>;
   if (!poems?.length) return <EmptyTabState message={isOwner ? "You haven't posted any poems yet." : "This user hasn't published any poems yet."} actionLabel={isOwner ? "Post a Poem" : undefined} />;
 
-  return <ContentGrid title="All Poems" items={poems} />;
+  return <ContentGrid title="All Poems" items={poems} viewerId={viewerId} onDelete={onDelete} onTogglePrivacy={onTogglePrivacy} />;
 }
 
-function ContentGrid({ title, items }: { title: string; items: ProfileContent[] }) {
+function ContentGrid({ title, items, viewerId, onDelete, onTogglePrivacy }: { title: string; items: ProfileContent[]; viewerId: number; onDelete: (item: ProfileContent) => Promise<void>; onTogglePrivacy: (item: ProfileContent) => Promise<void> }) {
   return (
     <div>
       <div className="mb-8 flex items-center justify-between border-b border-gray-200 pb-3">
@@ -27,7 +30,7 @@ function ContentGrid({ title, items }: { title: string; items: ProfileContent[] 
         <span className="text-xs font-bold uppercase tracking-widest text-gray-500">{items.length} Works</span>
       </div>
       <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 lg:gap-8">
-        {items.map((item) => <UniversalCard key={`${item.type}-${item.id}`} {...item} />)}
+        {items.map((item) => <UniversalCard key={`${item.type}-${item.id}`} {...item} isOwner={item.authorId === viewerId} isPrivate={item.isPrivate} onDeleteContent={() => onDelete(item)} onTogglePrivacy={() => onTogglePrivacy(item)} />)}
       </div>
     </div>
   );

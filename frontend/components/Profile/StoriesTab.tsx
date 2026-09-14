@@ -9,9 +9,12 @@ interface StoriesTabProps {
   loading: boolean;
   error: string | null;
   isOwner: boolean;
+  viewerId: number;
+  onDelete: (item: ProfileContent) => Promise<void>;
+  onTogglePrivacy: (item: ProfileContent) => Promise<void>;
 }
 
-export default function StoriesTab({ stories, loading, error, isOwner }: StoriesTabProps) {
+export default function StoriesTab({ stories, loading, error, isOwner, viewerId, onDelete, onTogglePrivacy }: StoriesTabProps) {
   if (loading) return <div className="py-16 text-center text-sm text-gray-500">Loading {isOwner ? "your" : "this user's"} stories...</div>;
   if (error) return <div className="py-16 text-center text-sm text-red-500">{error}</div>;
   if (!stories?.length) return <EmptyTabState message={isOwner ? "You haven't posted any stories yet." : "This user hasn't published any stories yet."} actionLabel={isOwner ? "Post a Story" : undefined} />;
@@ -23,7 +26,7 @@ export default function StoriesTab({ stories, loading, error, isOwner }: Stories
         <span className="text-xs font-bold uppercase tracking-widest text-gray-500">{stories.length} Works</span>
       </div>
       <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 lg:gap-8">
-        {stories.map((item) => <UniversalCard key={`${item.type}-${item.id}`} {...item} />)}
+        {stories.map((item) => <UniversalCard key={`${item.type}-${item.id}`} {...item} isOwner={item.authorId === viewerId} isPrivate={item.isPrivate} onDeleteContent={() => onDelete(item)} onTogglePrivacy={() => onTogglePrivacy(item)} />)}
       </div>
     </div>
   );

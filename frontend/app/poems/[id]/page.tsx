@@ -7,6 +7,7 @@ import { getPoem } from "@/utils/poems.api";
 import PoemStats from "@/components/Poems/PoemStats";
 import Tags from "@/components/Poems/Tags";
 import type { PoemApiRecord } from "@/types";
+import ContentComments from "@/components/Comments/ContentComments";
 
 interface PoemPageProps { params: Promise<{ id: string }> }
 
@@ -50,7 +51,7 @@ export default function PoemPage({ params }: PoemPageProps) {
                 {poem.is_mature && <span className="rounded-full bg-red-600 px-4 py-1.5 text-xs font-bold text-white">NSFW</span>}
               </div>
               <h1 className="mb-2 text-4xl font-serif font-bold tracking-tight md:text-6xl">{poem.title}</h1>
-              <p className="mb-6 text-xl italic text-gray-400">by {poem.author_name ?? "Unknown author"}</p>
+              <p className="mb-6 text-xl italic text-gray-400">by <Link href={`/profile/${encodeURIComponent(poem.author_name ?? "")}`} className="hover:text-white">{poem.author_name ?? "Unknown author"}</Link></p>
               <p className="mb-8 line-clamp-3 max-w-2xl text-base leading-relaxed text-gray-300">{poem.content}</p>
               <div className="mb-8 flex flex-wrap gap-8 md:gap-12">
                 <Stat label="Views" value={poem.views} />
@@ -78,6 +79,8 @@ export default function PoemPage({ params }: PoemPageProps) {
             </div>
             <Tags tags={poem.tag_names} />
             <button className="w-full rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">REPORT CONTENT</button>
+            <div className="border border-gray-200 bg-white p-5 shadow-sm"><h2 className="text-lg font-semibold text-black">Reviews</h2><p className="mt-2 text-sm text-gray-500">Reviews are not available yet.</p></div>
+            <ContentComments type="poem" contentId={poem.id} />
           </div>
         </div>
       </section>

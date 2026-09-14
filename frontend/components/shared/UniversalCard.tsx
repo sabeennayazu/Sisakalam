@@ -1,9 +1,11 @@
-import { Eye, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { Ellipsis, Eye, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import LikeButton from "@/components/interactions/LikeButton";
 import BookmarkButton from "@/components/interactions/BookmarkButton";
 import { formatTags } from "@/utils/content";
+import { startCopyLink } from "@/components/loader/UploadModal";
 
 export type ContentType = "story" | "poem" | "essay" | "journal" | string;
 
@@ -12,6 +14,7 @@ export interface UniversalCardProps {
     title: string;
     author: string;
     authorId?: number;
+    chapterSlug?: string | null;
     genre: string;
     image: string;
     views: string | number;
@@ -41,6 +44,10 @@ export interface UniversalCardProps {
     href?: string;
     onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
     children?: React.ReactNode;
+    isOwner?: boolean;
+    isPrivate?: boolean;
+    onDeleteContent?: () => Promise<void> | void;
+    onTogglePrivacy?: () => Promise<void> | void;
 }
 
 export default function UniversalCard({
@@ -68,8 +75,14 @@ export default function UniversalCard({
     tags,
     onClick,
     children,
+    chapterSlug,
+    isOwner = false,
+    isPrivate = false,
+    onDeleteContent,
+    onTogglePrivacy,
 }: UniversalCardProps) {
     const router = useRouter();
+    const [menuOpen, setMenuOpen] = useState(false);
     // Convert numeric values to strings if needed
     const formattedViews = typeof views === "number" ? views.toString() : views || "0";
     const formattedComments = typeof comments === "number" ? comments.toString() : comments || "0";
@@ -82,6 +95,25 @@ export default function UniversalCard({
             : type === "poem"
                 ? `/poems/${id}`
             : null;
+    const contentUrl = typeof window === "undefined"
+        ? destination ?? ""
+        : new URL(type === "story" && chapterSlug ? `/stories/${id}/${chapterSlug}` : destination ?? "", window.location.origin).toString();
+
+    const handleDelete = async (event: React.MouseEvent) => {
+        event.stopPropagation();
+        if (onDeleteContent && window.confirm(`Delete ${title || "this work"}?`)) await onDeleteContent();
+    };
+
+    const handleCopyLink = (event: React.MouseEvent) => {
+        event.stopPropagation();
+        if (contentUrl) startCopyLink(contentUrl);
+    };
+
+    const handlePrivacy = async (event: React.MouseEvent) => {
+        event.stopPropagation();
+        if (onTogglePrivacy) await onTogglePrivacy();
+        setMenuOpen(false);
+    };
 
     const handleCardClick = (event: React.MouseEvent<HTMLDivElement>) => {
         if (onClick) {
@@ -127,16 +159,28 @@ export default function UniversalCard({
                     <img
                         src={image}
                         alt={title || "Content cover"}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        className={`h-full w-full object-cover transition duration-300 group-hover:scale-105 ${isPrivate ? "opacity-70" : ""}`}
                     />
                 ) : (
-                    <div className="flex h-full items-center justify-center bg-gray-100 px-4 text-center text-sm font-medium text-gray-500">
+                    <div className={`flex h-full items-center justify-center bg-gray-100 px-4 text-center text-sm font-medium text-gray-500 ${isPrivate ? "opacity-70" : ""}`}>
                         {title || "Untitled"}
                     </div>
                 )}
 
+                {isPrivate && <div className="absolute inset-0 flex items-center justify-center bg-black/10"><span className="bg-white/85 px-3 py-1 text-xs font-bold uppercase tracking-widest text-black">Private</span></div>}
+
                 {/* Bookmark Button - Top Right */}
-                {showBookmark && !selectionMode && !isDraft && (
+                {isOwner && !selectionMode && !isDraft && (onDeleteContent || onTogglePrivacy) ? (
+                    <div className="absolute top-2 right-2 md:top-3 md:right-3" onClick={(event) => event.stopPropagation()}>
+                        <button type="button" onClick={() => setMenuOpen((open) => !open)} className="rounded-full bg-black/70 p-2 text-white shadow-md" aria-label="Content actions"><Ellipsis size={18} /></button>
+                        {menuOpen && <div className="absolute right-0 z-20 mt-2 w-36 rounded-lg border border-gray-200 bg-white py-1 text-left shadow-xl">
+                            <button type="button" onClick={handleDelete} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"><Trash2 size={14} /> Delete</button>
+                            <button type="button" onClick={handleCopyLink} className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">Copy Link</button>
+                            <button type="button" disabled className="w-full px-3 py-2 text-left text-sm text-gray-400">Share</button>
+                            <button type="button" onClick={handlePrivacy} className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">{isPrivate ? "Public" : "Private"}</button>
+                        </div>}
+                    </div>
+                ) : showBookmark && !selectionMode && !isDraft && (
                     <div onClick={(event) => event.stopPropagation()} className="absolute top-2 right-2 md:top-3 md:right-3 bg-black/20 rounded-full p-1.5 md:p-2 shadow-md hover:shadow-lg transition">
                         <BookmarkButton storyId={id} />
                     </div>
