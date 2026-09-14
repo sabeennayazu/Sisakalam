@@ -4,8 +4,9 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.shortcuts import get_object_or_404
 from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer
-from .models import User
+from .models import Follow, User
 
 
 def get_tokens_for_user(user):
@@ -60,6 +61,55 @@ class ProfileView(generics.RetrieveAPIView):
             "following": user.following_count,
             "works": user.total_poems + user.total_stories,
         })
+
+
+class PublicProfileView(generics.RetrieveAPIView):
+    permission_classes = [AllowAny]
+    lookup_field = "username"
+    lookup_url_kwarg = "username"
+    queryset = User.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        user = self.get_object()
+        is_following = request.user.is_authenticated and Follow.objects.filter(
+            follower=request.user,
+            following=user,
+        ).exists()
+        return Response({
+            "id": user.id,
+            "username": user.username,
+            "bio": user.bio,
+            "location": user.location,
+            "website": user.website,
+            "profile_picture": request.build_absolute_uri(user.profile_picture.url)
+            if user.profile_picture else None,
+            "followers": user.followers_count,
+            "following": user.following_count,
+            "works": user.total_poems + user.total_stories,
+            "is_private": user.is_private,
+            "is_following": is_following,
+        })
+
+
+class FollowView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, username, action):
+        target = get_object_or_404(User, username=username)
+        if target == request.user:
+            return Response({"detail": "You cannot follow yourself."}, status=status.HTTP_400_BAD_REQUEST)
+
+        relation = Follow.objects.filter(follower=request.user, following=target)
+        if action == "follow":
+            Follow.objects.get_or_create(follower=request.user, following=target)
+        else:
+            relation.delete()
+
+        target.followers_count = Follow.objects.filter(following=target).count()
+        target.save(update_fields=["followers_count"])
+        request.user.following_count = Follow.objects.filter(follower=request.user).count()
+        request.user.save(update_fields=["following_count"])
+        return Response({"is_following": action == "follow", "followers": target.followers_count})
 
 
 class LogoutView(APIView):

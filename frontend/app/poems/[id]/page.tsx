@@ -36,7 +36,7 @@ export default function PoemPage({ params }: PoemPageProps) {
 
   return (
     <div className="min-h-screen bg-white">
-      <section className="bg-[#1a1a1a] py-16 text-white">
+      <section className="bg-[#1a1a1a] py-22 text-white">
         <div className="relative z-10 mx-auto max-w-6xl px-8">
           <div className="flex flex-col gap-12 md:flex-row">
             <div className="flex shrink-0 justify-center md:justify-start">

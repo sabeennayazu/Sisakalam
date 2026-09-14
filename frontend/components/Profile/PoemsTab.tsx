@@ -8,12 +8,13 @@ interface PoemsTabProps {
   poems: ProfileContent[] | null;
   loading: boolean;
   error: string | null;
+  isOwner: boolean;
 }
 
-export default function PoemsTab({ poems, loading, error }: PoemsTabProps) {
-  if (loading) return <div className="py-16 text-center text-sm text-gray-500">Loading your poems...</div>;
+export default function PoemsTab({ poems, loading, error, isOwner }: PoemsTabProps) {
+  if (loading) return <div className="py-16 text-center text-sm text-gray-500">Loading {isOwner ? "your" : "this user's"} poems...</div>;
   if (error) return <div className="py-16 text-center text-sm text-red-500">{error}</div>;
-  if (!poems?.length) return <EmptyTabState message="You haven't posted any poems yet." actionLabel="Post a Poem" />;
+  if (!poems?.length) return <EmptyTabState message={isOwner ? "You haven't posted any poems yet." : "This user hasn't published any poems yet."} actionLabel={isOwner ? "Post a Poem" : undefined} />;
 
   return <ContentGrid title="All Poems" items={poems} />;
 }

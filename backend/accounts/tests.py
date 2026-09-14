@@ -48,3 +48,31 @@ class AuthEndpointTests(APITestCase):
         self.assertEqual(response.data["followers"], 4)
         self.assertEqual(response.data["following"], 2)
         self.assertEqual(response.data["works"], 4)
+
+    def test_public_profile_and_follow_actions_use_username(self):
+        from django.contrib.auth import get_user_model
+
+        viewer = get_user_model().objects.create_user(
+            username="viewer",
+            email="viewer@example.com",
+            password="strongpass123",
+        )
+        target = get_user_model().objects.create_user(
+            username="john-doe",
+            email="john@example.com",
+            password="strongpass123",
+        )
+        self.client.force_authenticate(user=viewer)
+
+        profile = self.client.get(reverse("public-profile", kwargs={"username": "john-doe"}))
+        self.assertEqual(profile.status_code, status.HTTP_200_OK)
+        self.assertEqual(profile.data["id"], target.id)
+        self.assertFalse(profile.data["is_following"])
+
+        followed = self.client.post(reverse("follow-profile", kwargs={"username": "john-doe", "action": "follow"}))
+        self.assertEqual(followed.status_code, status.HTTP_200_OK)
+        self.assertTrue(followed.data["is_following"])
+
+        unfollowed = self.client.post(reverse("follow-profile", kwargs={"username": "john-doe", "action": "unfollow"}))
+        self.assertEqual(unfollowed.status_code, status.HTTP_200_OK)
+        self.assertFalse(unfollowed.data["is_following"])

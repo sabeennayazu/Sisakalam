@@ -18,6 +18,13 @@ export interface Profile {
   followers: number;
   following: number;
   works: number;
+  is_private?: boolean;
+  is_following?: boolean;
+}
+
+interface FollowResponse {
+  is_following: boolean;
+  followers: number;
 }
 
 export const getCurrentUser = async (): Promise<Profile> => {
@@ -132,9 +139,8 @@ export const searchUsers = async (query: string) => {
  * @returns The public profile data for the requested user.
  * @requiresAuthentication false
  */
-export const getUserProfile = async (userId: string | number) => {
-  // TODO: Backend endpoint pending for public profile lookup.
-  return apiFetch(`/accounts/users/${userId}/`);
+export const getUserProfile = async (username: string) => {
+  return apiFetch<Profile>(`/accounts/users/${encodeURIComponent(username)}/`);
 };
 
 /**
@@ -144,9 +150,8 @@ export const getUserProfile = async (userId: string | number) => {
  * @returns The follow operation result.
  * @requiresAuthentication true
  */
-export const followUser = async (userId: string | number) => {
-  // TODO: Backend endpoint pending for follow actions.
-  return apiFetch(`/accounts/users/${userId}/follow/`, { method: "POST" });
+export const followUser = async (username: string) => {
+  return apiFetch<FollowResponse>(`/accounts/users/${encodeURIComponent(username)}/follow/`, { method: "POST" });
 };
 
 /**
@@ -156,9 +161,8 @@ export const followUser = async (userId: string | number) => {
  * @returns The unfollow operation result.
  * @requiresAuthentication true
  */
-export const unfollowUser = async (userId: string | number) => {
-  // TODO: Backend endpoint pending for follow actions.
-  return apiFetch(`/accounts/users/${userId}/unfollow/`, { method: "POST" });
+export const unfollowUser = async (username: string) => {
+  return apiFetch<FollowResponse>(`/accounts/users/${encodeURIComponent(username)}/unfollow/`, { method: "POST" });
 };
 
 /**

@@ -7,6 +7,7 @@ export type ProfileContentType = "poem" | "story";
 
 export interface ProfileContent {
   id: number;
+  authorId?: number;
   type: ProfileContentType;
   title: string;
   author: string;
@@ -24,6 +25,7 @@ interface CollectionResponse<T> {
 
 interface ContentRecord {
   id: number;
+  author: number;
   title: string;
   author_name: string | null;
   genre_name: string | null;
@@ -69,6 +71,7 @@ const absoluteImageUrl = (image: string | null): string => {
 
 const mapContent = (item: ContentRecord, type: ProfileContentType): ProfileContent => ({
   id: item.id,
+  authorId: item.author,
   type,
   title: item.title,
   author: item.author_name ?? "Unknown author",
@@ -100,6 +103,16 @@ export const getMyPoems = async (): Promise<ProfileContent[]> => {
 
 export const getMyStories = async (): Promise<ProfileContent[]> => {
   const response = await getStories<ContentRecord[]>({ mine: 1 });
+  return asCollection(response).map((item) => mapContent(item, "story"));
+};
+
+export const getUserPoems = async (userId: string | number): Promise<ProfileContent[]> => {
+  const response = await getPoems<ContentRecord[]>({ author: userId });
+  return asCollection(response).map((item) => mapContent(item, "poem"));
+};
+
+export const getUserStories = async (userId: string | number): Promise<ProfileContent[]> => {
+  const response = await getStories<ContentRecord[]>({ author: userId });
   return asCollection(response).map((item) => mapContent(item, "story"));
 };
 

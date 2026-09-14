@@ -8,12 +8,13 @@ interface StoriesTabProps {
   stories: ProfileContent[] | null;
   loading: boolean;
   error: string | null;
+  isOwner: boolean;
 }
 
-export default function StoriesTab({ stories, loading, error }: StoriesTabProps) {
-  if (loading) return <div className="py-16 text-center text-sm text-gray-500">Loading your stories...</div>;
+export default function StoriesTab({ stories, loading, error, isOwner }: StoriesTabProps) {
+  if (loading) return <div className="py-16 text-center text-sm text-gray-500">Loading {isOwner ? "your" : "this user's"} stories...</div>;
   if (error) return <div className="py-16 text-center text-sm text-red-500">{error}</div>;
-  if (!stories?.length) return <EmptyTabState message="You haven't posted any stories yet." actionLabel="Post a Story" />;
+  if (!stories?.length) return <EmptyTabState message={isOwner ? "You haven't posted any stories yet." : "This user hasn't published any stories yet."} actionLabel={isOwner ? "Post a Story" : undefined} />;
 
   return (
     <div>

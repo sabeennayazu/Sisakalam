@@ -1,5 +1,6 @@
 import { Eye, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import LikeButton from "@/components/interactions/LikeButton";
 import BookmarkButton from "@/components/interactions/BookmarkButton";
 import { formatTags } from "@/utils/content";
@@ -10,6 +11,7 @@ export interface UniversalCardProps {
     id: number;
     title: string;
     author: string;
+    authorId?: number;
     genre: string;
     image: string;
     views: string | number;
@@ -45,6 +47,7 @@ export default function UniversalCard({
     id,
     title,
     author,
+    authorId,
     genre,
     image,
     views,
@@ -165,9 +168,17 @@ export default function UniversalCard({
             </h3>
 
             {/* Author */}
-            <p className="text-xs md:text-sm text-gray-500 line-clamp-1 mb-3">
-                {author || "Unknown Author"}
-            </p>
+            {authorId ? (
+                <Link
+                    href={`/profile/${encodeURIComponent(author)}`}
+                    onClick={(event) => event.stopPropagation()}
+                    className="mb-3 block line-clamp-1 text-xs text-gray-500 hover:text-black md:text-sm"
+                >
+                    {author || "Unknown Author"}
+                </Link>
+            ) : (
+                <p className="mb-3 line-clamp-1 text-xs text-gray-500 md:text-sm">{author || "Unknown Author"}</p>
+            )}
 
             {/* Optional Description */}
             {description && (
