@@ -3,7 +3,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -31,6 +31,7 @@ class StorySerializer(serializers.ModelSerializer):
     tag_names = serializers.SerializerMethodField(read_only=True)
     author_name = serializers.SerializerMethodField(read_only=True)
     genre_name = serializers.SerializerMethodField(read_only=True)
+    chapter_count = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Story
@@ -50,6 +51,9 @@ class StorySerializer(serializers.ModelSerializer):
 
     def get_genre_name(self, obj):
         return obj.genre.name if obj.genre else None
+
+    def get_chapter_count(self, obj):
+        return obj.chapters.count()
 
     def create(self, validated_data):
         tags_data = validated_data.pop("tags", [])
@@ -236,7 +240,7 @@ class AuthorStoryListView(ListAPIView):
 class ChapterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chapter
-        fields = ["id", "story", "title", "chapter_number", "content", "order", "created_at", "updated_at"]
+        fields = ["id", "story", "title", "slug", "chapter_number", "content", "order", "created_at", "updated_at"]
         read_only_fields = ["id", "story", "created_at", "updated_at"]
 
 
@@ -277,3 +281,17 @@ class StoryChapterDetailAPIView(RetrieveUpdateDestroyAPIView):
         if not self.request.user.is_authenticated or instance.story.author_id != self.request.user.id:
             raise permissions.PermissionDenied("You can only manage your own story chapters.")
         instance.delete()
+
+
+class StoryChapterBySlugAPIView(RetrieveAPIView):
+    serializer_class = ChapterSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        story = get_object_or_404(Story, pk=self.kwargs["story_id"])
+        if story.status != StoryStatus.PUBLISHED:
+            raise Http404
+        return story.chapters.all()
+
+    def get_object(self):
+        return get_object_or_404(self.get_queryset(), slug=self.kwargs["slug"])

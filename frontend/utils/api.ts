@@ -4,6 +4,15 @@
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
+export const getMediaUrl = (image: string | null): string => {
+  if (!image) return "";
+  if (image.startsWith("http")) return image;
+
+  const apiUrl = new URL(API_BASE_URL);
+  const mediaPath = image.startsWith("/") ? image : `/${image}`;
+  return `${apiUrl.origin}${mediaPath}`;
+};
+
 // --- Token Management ---
 
 /**

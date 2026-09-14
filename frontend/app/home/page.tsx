@@ -5,6 +5,8 @@ import StoriesByGenre from "@/components/Sections/stories/genre/StoriesByGenre";
 import PoemsByMood from "@/components/Sections/poems/genre/PoemsByMood";
 import RecommendedStories from "@/components/Sections/stories/personalized/RecommendedStories";
 import RecommendedPoems from "@/components/Sections/poems/personalized/RecommendedPoems";
+import PoemTest from "@/components/Sections/poems/test/PoemTest";
+import StoryTest from "@/components/Sections/stories/test/storyTest";
 
 export default function HomePage() {
   return (
@@ -12,6 +14,8 @@ export default function HomePage() {
       <div className="min-h-screen bg-white  ">
         
         <div className="py-18 px-2">
+          <PoemTest />
+          <StoryTest />
           <StoriesByGenre />
           <PoemsByMood />
           <RecommendedStories />

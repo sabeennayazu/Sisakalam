@@ -1,6 +1,8 @@
 import { Eye, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import LikeButton from "@/components/interactions/LikeButton";
 import BookmarkButton from "@/components/interactions/BookmarkButton";
+import { formatTags } from "@/utils/content";
 
 export type ContentType = "story" | "poem" | "essay" | "journal" | string;
 
@@ -35,7 +37,7 @@ export interface UniversalCardProps {
     description?: string;
     tags?: string[];
     href?: string;
-    onClick?: () => void;
+    onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
     children?: React.ReactNode;
 }
 
@@ -64,16 +66,40 @@ export default function UniversalCard({
     onClick,
     children,
 }: UniversalCardProps) {
+    const router = useRouter();
     // Convert numeric values to strings if needed
     const formattedViews = typeof views === "number" ? views.toString() : views || "0";
     const formattedComments = typeof comments === "number" ? comments.toString() : comments || "0";
     const isDraft = status === "draft";
     const savedTime = savedAt ? formatSavedTime(savedAt) : "just now";
+    const destination = status === "draft"
+        ? "/write"
+        : type === "story"
+            ? `/stories/${id}`
+            : type === "poem"
+                ? `/poems/${id}`
+            : null;
+
+    const handleCardClick = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (onClick) {
+            onClick(event);
+            return;
+        }
+        if (destination) router.push(destination);
+    };
 
     return (
         <div
             className="min-w-[150px] md:min-w-[180px] lg:min-w-[200px]  group cursor-pointer relative "
-            onClick={onClick}
+            onClick={handleCardClick}
+            onKeyDown={(event) => {
+                if ((event.key === "Enter" || event.key === " ") && destination) {
+                    event.preventDefault();
+                    router.push(destination);
+                }
+            }}
+            role={destination ? "link" : undefined}
+            tabIndex={destination ? 0 : undefined}
         >
             {/* Selection Checkbox */}
             {selectionMode && onToggleSelect && (
@@ -94,20 +120,21 @@ export default function UniversalCard({
                     selectionMode && isSelected ? "ring-2 ring-black" : ""
                 }`}
             >
-                <img
-                    src={image || "https://images.unsplash.com/photo-1507842217343-583f20270319?w=500&h=700&fit=crop"}
-                    alt={title || "Content cover"}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src =
-                            "https://images.unsplash.com/photo-1507842217343-583f20270319?w=500&h=700&fit=crop";
-                    }}
-                />
+                {image ? (
+                    <img
+                        src={image}
+                        alt={title || "Content cover"}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                ) : (
+                    <div className="flex h-full items-center justify-center bg-gray-100 px-4 text-center text-sm font-medium text-gray-500">
+                        {title || "Untitled"}
+                    </div>
+                )}
 
                 {/* Bookmark Button - Top Right */}
                 {showBookmark && !selectionMode && !isDraft && (
-                    <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-black/20 rounded-full p-1.5 md:p-2 shadow-md hover:shadow-lg transition">
+                    <div onClick={(event) => event.stopPropagation()} className="absolute top-2 right-2 md:top-3 md:right-3 bg-black/20 rounded-full p-1.5 md:p-2 shadow-md hover:shadow-lg transition">
                         <BookmarkButton storyId={id} />
                     </div>
                 )}
@@ -157,7 +184,7 @@ export default function UniversalCard({
                             key={idx}
                             className="text-[8px] md:text-[9px] px-2 py-0.5 bg-gray-50 text-gray-600 rounded-full truncate"
                         >
-                            #{tag}
+                            {formatTags([tag])}
                         </span>
                     ))}
                 </div>
@@ -171,7 +198,10 @@ export default function UniversalCard({
                         {onEdit && (
                             <button
                                 type="button"
-                                onClick={onEdit}
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onEdit(event);
+                                }}
                                 className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-black"
                                 title="Edit draft"
                                 aria-label="Edit draft"
@@ -182,7 +212,10 @@ export default function UniversalCard({
                         {onDelete && (
                             <button
                                 type="button"
-                                onClick={onDelete}
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onDelete(event);
+                                }}
                                 className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
                                 title="Delete draft"
                                 aria-label="Delete draft"
@@ -202,8 +235,10 @@ export default function UniversalCard({
                         <span className="truncate">{formattedViews}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                        <LikeButton storyId={id} initialLikes={likes} />
-                        <div className="flex items-center gap-1 hover:text-black transition-colors">
+                        <div onClick={(event) => event.stopPropagation()}>
+                            <LikeButton storyId={id} initialLikes={likes} />
+                        </div>
+                        <div onClick={(event) => event.stopPropagation()} className="flex items-center gap-1 hover:text-black transition-colors">
                             <MessageCircle size={14} />
                             <span className="truncate">{formattedComments}</span>
                         </div>
@@ -212,7 +247,7 @@ export default function UniversalCard({
             )}
 
             {/* Additional Children (for custom content) */}
-            {children && <div className="mt-2">{children}</div>}
+            {children && <div className="mt-2" onClick={(event) => event.stopPropagation()}>{children}</div>}
         </div>
     );
 }

@@ -18,8 +18,8 @@ export const getPoems = async <T = unknown>(query?: Record<string, string | numb
  * @returns The poem record.
  * @requiresAuthentication false
  */
-export const getPoem = async (poemId: string | number) => {
-  return apiFetch(`/poems/${poemId}/`);
+export const getPoem = async <T = unknown>(poemId: string | number): Promise<T> => {
+  return apiFetch<T>(`/poems/${poemId}/`);
 };
 
 /**

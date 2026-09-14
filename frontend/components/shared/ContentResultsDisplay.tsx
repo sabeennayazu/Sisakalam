@@ -120,6 +120,7 @@ export default function ContentResultsDisplay({ title, label }: ContentResultsDi
                       views={item.views}
                       likes={item.likes}
                       comments={item.comments}
+                      type={activeTab === "STORIES" ? "story" : "poem"}
                       showBookmark={true}
                     />
                   ))}

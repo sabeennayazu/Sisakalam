@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils.text import slugify
 
 
 class Tags(models.Model):
@@ -104,6 +105,7 @@ class Chapter(models.Model):
         related_name="chapters"
     )
     title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, default="")
     chapter_number = models.PositiveIntegerField()
     content = models.TextField()
     order = models.PositiveIntegerField()
@@ -114,6 +116,20 @@ class Chapter(models.Model):
     class Meta:
         unique_together = ("story", "order")
         ordering = ["order"]
+        constraints = [
+            models.UniqueConstraint(fields=["story", "slug"], name="unique_story_chapter_slug"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = slugify(self.title) or f"chapter-{self.chapter_number}"
+            candidate = base_slug
+            suffix = 2
+            while Chapter.objects.filter(story=self.story, slug=candidate).exclude(pk=self.pk).exists():
+                candidate = f"{base_slug}-{suffix}"
+                suffix += 1
+            self.slug = candidate
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.story.title} - Chapter {self.order}: {self.title}"

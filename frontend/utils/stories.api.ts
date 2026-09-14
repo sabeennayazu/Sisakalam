@@ -18,8 +18,8 @@ export const getStories = async <T = unknown>(query?: Record<string, string | nu
  * @returns The story record.
  * @requiresAuthentication false
  */
-export const getStory = async (storyId: string | number) => {
-  return apiFetch(`/stories/${storyId}/`);
+export const getStory = async <T = unknown>(storyId: string | number): Promise<T> => {
+  return apiFetch<T>(`/stories/${storyId}/`);
 };
 
 /**
@@ -106,8 +106,12 @@ export const getDrafts = async () => {
  * @returns A list of chapters.
  * @requiresAuthentication false
  */
-export const getStoryChapters = async (storyId: string | number) => {
-  return apiFetch(`/stories/${storyId}/chapters/`);
+export const getStoryChapters = async <T = unknown>(storyId: string | number): Promise<T> => {
+  return apiFetch<T>(`/stories/${storyId}/chapters/`);
+};
+
+export const getStoryChapterBySlug = async <T = unknown>(storyId: string | number, slug: string): Promise<T> => {
+  return apiFetch<T>(`/stories/${storyId}/chapters/by-slug/${encodeURIComponent(slug)}/`);
 };
 
 /**
