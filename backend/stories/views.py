@@ -1,7 +1,9 @@
-from django.db.models import Q
+from django.db import transaction
+from django.db.models import Max, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, serializers, status, viewsets
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.pagination import PageNumberPagination
@@ -66,22 +68,44 @@ class StorySerializer(serializers.ModelSerializer):
         tags_data = validated_data.pop("tags", [])
         content = validated_data.pop("content", "")
         request = self.context.get("request")
-        story = Story.objects.create(author=request.user, **validated_data)
-        self._sync_tags(story, tags_data)
-        if content:
-            Chapter.objects.create(story=story, title=story.title, chapter_number=1, order=1, content=content)
-        if story.status == StoryStatus.PUBLISHED:
-            story.publish()
+        if validated_data.get("status") == StoryStatus.PUBLISHED and not content.strip():
+            raise serializers.ValidationError({"content": "Write the first chapter before publishing this story."})
+        with transaction.atomic():
+            story = Story.objects.create(author=request.user, **validated_data)
+            self._sync_tags(story, tags_data)
+            self._create_initial_chapter(story, content)
+            if story.status == StoryStatus.PUBLISHED:
+                story.publish()
         return story
 
     def update(self, instance, validated_data):
         tags_data = validated_data.pop("tags", None)
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        if tags_data is not None:
-            self._sync_tags(instance, tags_data)
+        content = validated_data.pop("content", "")
+        with transaction.atomic():
+            instance = Story.objects.select_for_update().get(pk=instance.pk)
+            was_published = instance.status == StoryStatus.PUBLISHED
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            if instance.status == StoryStatus.PUBLISHED and not instance.chapters.exists() and not content.strip():
+                raise serializers.ValidationError({"content": "Write the first chapter before publishing this story."})
+            instance.save()
+            if tags_data is not None:
+                self._sync_tags(instance, tags_data)
+            self._create_initial_chapter(instance, content)
+            if instance.status == StoryStatus.PUBLISHED and not was_published:
+                instance.publish()
         return instance
+
+    def _create_initial_chapter(self, story, content):
+        if content.strip() and not story.chapters.exists():
+            Chapter.objects.create(
+                story=story,
+                title=story.title,
+                chapter_number=1,
+                order=1,
+                content=content,
+            )
+            Story.objects.filter(pk=story.pk).update(chapter_count=1)
 
     def _sync_tags(self, story, tag_names):
         tag_objs = []
@@ -212,9 +236,11 @@ class StoryViewSet(viewsets.ModelViewSet):
         story = self.get_object()
         if story.status == StoryStatus.PUBLISHED:
             return Response({"detail": "Story is already published."}, status=status.HTTP_400_BAD_REQUEST)
-        story.publish()
-        if not story.chapters.exists():
-            Chapter.objects.create(story=story, title=story.title, chapter_number=1, order=1, content="")
+        with transaction.atomic():
+            story = Story.objects.select_for_update().get(pk=story.pk)
+            if not story.chapters.exists():
+                return Response({"detail": "Add a first chapter before publishing this story."}, status=status.HTTP_400_BAD_REQUEST)
+            story.publish()
         return Response(self.get_serializer(story).data)
 
     @action(detail=True, methods=["post"], url_path="unpublish")
@@ -255,7 +281,7 @@ class ChapterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chapter
         fields = ["id", "story", "title", "slug", "chapter_number", "content", "order", "created_at", "updated_at"]
-        read_only_fields = ["id", "story", "created_at", "updated_at"]
+        read_only_fields = ["id", "story", "chapter_number", "order", "created_at", "updated_at"]
 
 
 class StoryChapterListCreateAPIView(ListCreateAPIView):
@@ -269,10 +295,13 @@ class StoryChapterListCreateAPIView(ListCreateAPIView):
         return story.chapters.all()
 
     def perform_create(self, serializer):
-        story = get_object_or_404(Story, pk=self.kwargs["story_id"])
-        if not self.request.user.is_authenticated or story.author_id != self.request.user.id:
-            raise permissions.PermissionDenied("You can only manage your own story chapters.")
-        serializer.save(story=story)
+        with transaction.atomic():
+            story = get_object_or_404(Story.objects.select_for_update(), pk=self.kwargs["story_id"])
+            if not self.request.user.is_authenticated or story.author_id != self.request.user.id:
+                raise PermissionDenied("You can only manage your own story chapters.")
+            next_number = (story.chapters.aggregate(max_number=Max("chapter_number"))["max_number"] or 0) + 1
+            serializer.save(story=story, chapter_number=next_number, order=next_number)
+            Story.objects.filter(pk=story.pk).update(chapter_count=story.chapters.count())
 
 
 class StoryChapterDetailAPIView(RetrieveUpdateDestroyAPIView):
@@ -288,13 +317,16 @@ class StoryChapterDetailAPIView(RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         chapter = self.get_object()
         if not self.request.user.is_authenticated or chapter.story.author_id != self.request.user.id:
-            raise permissions.PermissionDenied("You can only manage your own story chapters.")
+            raise PermissionDenied("You can only manage your own story chapters.")
         serializer.save()
 
     def perform_destroy(self, instance):
         if not self.request.user.is_authenticated or instance.story.author_id != self.request.user.id:
-            raise permissions.PermissionDenied("You can only manage your own story chapters.")
-        instance.delete()
+            raise PermissionDenied("You can only manage your own story chapters.")
+        with transaction.atomic():
+            story = Story.objects.select_for_update().get(pk=instance.story_id)
+            instance.delete()
+            Story.objects.filter(pk=story.pk).update(chapter_count=story.chapters.count())
 
 
 class StoryChapterBySlugAPIView(RetrieveAPIView):

@@ -13,6 +13,7 @@ interface PublishingTaskInput {
 	payload: Record<string, unknown>;
 	operation?: TaskOperation;
 	url?: string;
+	request?: () => Promise<unknown>;
 	onSuccess?: (result: unknown) => void;
 	onSettled?: () => void;
 }
@@ -42,8 +43,8 @@ const updateTask = (updates: Partial<PublishingTask>) => {
 const getErrorMessage = (error: unknown) =>
 	error instanceof Error ? error.message : "We could not publish your work. Please try again.";
 
-const startTask = ({ type, payload, operation = "publish", url }: PublishingTaskInput) => {
-	activeTask = { type, payload, operation, url, status: "uploading", error: null, result: null };
+const startTask = ({ type, payload, operation = "publish", url, request: customRequest, onSuccess, onSettled }: PublishingTaskInput) => {
+	activeTask = { type, payload, operation, url, request: customRequest, onSuccess, onSettled, status: "uploading", error: null, result: null };
 	notify();
 
 	if (operation === "copy-link") {
@@ -55,7 +56,7 @@ const startTask = ({ type, payload, operation = "publish", url }: PublishingTask
 
 	const request = operation === "save"
 		? type === "poem" ? savePoemDraft(payload) : saveStoryDraft(payload)
-		: type === "poem" ? createPoem(payload) : createStory(payload);
+		: customRequest ? customRequest() : type === "poem" ? createPoem(payload) : createStory(payload);
 	void request
 		.then((result) => {
 			updateTask({ status: "success", result });

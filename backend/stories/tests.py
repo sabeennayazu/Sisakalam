@@ -60,3 +60,106 @@ class StoriesEndpointTests(APITestCase):
         self.assertEqual(publish.status_code, status.HTTP_200_OK)
         self.assertEqual(Chapter.objects.filter(story=story).count(), 1)
         self.assertEqual(story.chapters.get().content, "Saved chapter body")
+
+    def test_publishing_autosaved_draft_creates_chapter_from_final_content(self):
+        from django.contrib.auth import get_user_model
+        from stories.models import Chapter, Genre, Story
+
+        user = get_user_model().objects.create_user(username="autosaved", email="autosaved@example.com", password="strongpass123")
+        genre = Genre.objects.create(name="Speculative", type="story")
+        self.client.force_authenticate(user=user)
+        draft_response = self.client.post(
+            reverse("story-list"),
+            {"title": "Autosaved Story", "synopsis": "Synopsis", "genre": genre.id, "status": "draft"},
+            format="json",
+        )
+        story = Story.objects.get(pk=draft_response.data["id"])
+        self.assertFalse(story.chapters.exists())
+
+        response = self.client.patch(
+            reverse("story-detail", kwargs={"pk": story.pk}),
+            {"status": "published", "content": "The final editor content."},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        chapter = Chapter.objects.get(story=story)
+        self.assertEqual(chapter.chapter_number, 1)
+        self.assertEqual(chapter.content, "The final editor content.")
+        self.assertEqual(Chapter.objects.filter(story=story).count(), 1)
+
+    def test_published_story_requires_initial_content_and_does_not_persist_partial_story(self):
+        from django.contrib.auth import get_user_model
+        from stories.models import Genre, Story
+
+        user = get_user_model().objects.create_user(username="emptywriter", email="empty@example.com", password="strongpass123")
+        genre = Genre.objects.create(name="Short Fiction", type="story")
+        self.client.force_authenticate(user=user)
+
+        response = self.client.post(
+            reverse("story-list"),
+            {"title": "Empty", "synopsis": "No content", "genre": genre.id, "status": "published"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Story.objects.filter(title="Empty").exists())
+
+    def test_story_edit_does_not_duplicate_or_overwrite_initial_chapter(self):
+        from django.contrib.auth import get_user_model
+        from stories.models import Chapter, Genre, Story
+
+        user = get_user_model().objects.create_user(username="editwriter", email="edit@example.com", password="strongpass123")
+        genre = Genre.objects.create(name="Mystery", type="story")
+        story = Story.objects.create(title="Editable", synopsis="Synopsis", author=user, genre=genre, status="published")
+        chapter = Chapter.objects.create(story=story, title="Editable", chapter_number=1, order=1, content="Original chapter")
+        self.client.force_authenticate(user=user)
+
+        response = self.client.patch(
+            reverse("story-detail", kwargs={"pk": story.pk}),
+            {"title": "Edited title", "content": "Replacement content"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(story.chapters.count(), 1)
+        chapter.refresh_from_db()
+        self.assertEqual(chapter.content, "Original chapter")
+
+    def test_published_chapter_is_retrievable_by_slug(self):
+        from django.contrib.auth import get_user_model
+        from stories.models import Chapter, Genre, Story
+
+        user = get_user_model().objects.create_user(username="readerwriter", email="readerwriter@example.com", password="strongpass123")
+        genre = Genre.objects.create(name="Adventure", type="story")
+        story = Story.objects.create(title="Readable", synopsis="Synopsis", author=user, genre=genre, status="published")
+        chapter = Chapter.objects.create(story=story, title="Chapter One", chapter_number=1, order=1, content="Original story content")
+
+        response = self.client.get(reverse("story-chapter-by-slug", kwargs={"story_id": story.id, "slug": chapter.slug}))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["content"], "Original story content")
+
+    def test_only_story_owner_can_create_sequential_chapters(self):
+        from django.contrib.auth import get_user_model
+        from stories.models import Chapter, Genre, Story
+
+        owner = get_user_model().objects.create_user(username="owner", email="owner@example.com", password="strongpass123")
+        other = get_user_model().objects.create_user(username="other", email="other@example.com", password="strongpass123")
+        genre = Genre.objects.create(name="Serial", type="story")
+        story = Story.objects.create(title="Serial Story", synopsis="Synopsis", author=owner, genre=genre, status="published")
+        Chapter.objects.create(story=story, title="First", chapter_number=1, order=1, content="One")
+
+        self.client.force_authenticate(user=other)
+        denied = self.client.post(reverse("story-chapters", kwargs={"story_id": story.id}), {"title": "Nope", "content": "Nope"}, format="json")
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+        denied_edit = self.client.patch(reverse("story-chapter-detail", kwargs={"story_id": story.id, "pk": story.chapters.get().pk}), {"title": "Nope"}, format="json")
+        self.assertEqual(denied_edit.status_code, status.HTTP_403_FORBIDDEN)
+        denied_delete = self.client.delete(reverse("story-chapter-detail", kwargs={"story_id": story.id, "pk": story.chapters.get().pk}))
+        self.assertEqual(denied_delete.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(user=owner)
+        created = self.client.post(reverse("story-chapters", kwargs={"story_id": story.id}), {"title": "Second", "content": "Two"}, format="json")
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(created.data["chapter_number"], 2)
+        self.assertEqual(created.data["order"], 2)

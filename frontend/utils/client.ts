@@ -62,6 +62,33 @@ const parseResponseBody = async (response: Response) => {
   }
 };
 
+const safeErrorText = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const message = value.trim();
+  if (!message || /[<>]/.test(message) || /traceback|operationalerror|integrityerror|programmingerror|sqlstate|django/i.test(message)) return null;
+  return message;
+};
+
+const getApiErrorMessage = (status: number, data: unknown): string => {
+  if (status === 401) return "Your session has expired. Please sign in again.";
+  if (status === 403) return "You do not have permission to do that.";
+  if (status >= 500) return "Something went wrong on our end. Please try again.";
+  if (status === 0) return "Unable to connect. Check your connection and try again.";
+  if (status === 404) return "The requested content could not be found.";
+
+  if (data && typeof data === "object") {
+    const record = data as Record<string, unknown>;
+    const detail = safeErrorText(record.detail) ?? safeErrorText(record.message);
+    if (detail) return detail;
+    for (const value of Object.values(record)) {
+      const message = safeErrorText(value) ?? (Array.isArray(value) ? value.map(safeErrorText).find(Boolean) ?? null : null);
+      if (message) return message;
+    }
+  }
+
+  return "Please check your information and try again.";
+};
+
 let refreshPromise: Promise<string> | null = null;
 
 const refreshAccessToken = async (): Promise<string> => {
@@ -118,35 +145,35 @@ export const apiFetch = async <T = unknown>(
         ? body as BodyInit
         : JSON.stringify(body);
 
-  let response = await fetch(url, {
+  const sendRequest = () => fetch(url, {
     ...requestOptions,
     headers: requestHeaders,
     body: finalBody,
+  }).catch(() => {
+    throw new ApiError(getApiErrorMessage(0, null), 0, null);
   });
 
-  if (response.status === 401 && getRefreshToken()) {
-    try {
-      const accessToken = await refreshAccessToken();
-      requestHeaders.set("Authorization", `Bearer ${accessToken}`);
-      response = await fetch(url, {
-        ...requestOptions,
-        headers: requestHeaders,
-        body: finalBody,
-      });
-    } catch {
+  let response = await sendRequest();
+
+  if (response.status === 401) {
+    if (getRefreshToken()) {
+      try {
+        const accessToken = await refreshAccessToken();
+        requestHeaders.set("Authorization", `Bearer ${accessToken}`);
+        response = await sendRequest();
+      } catch {
+        clearTokens();
+      }
+    } else {
       clearTokens();
-      // Keep the original 401 response as the error reported to the caller.
     }
+    if (response.status === 401) clearTokens();
   }
 
   const data = await parseResponseBody(response);
 
   if (!response.ok) {
-    const detail = typeof data === "object" && data !== null
-      ? (data as Record<string, unknown>).detail || (data as Record<string, unknown>).message || data
-      : data;
-
-    throw new ApiError(typeof detail === "string" ? detail : "An unexpected error occurred", response.status, data);
+    throw new ApiError(getApiErrorMessage(response.status, data), response.status, data);
   }
 
   return data as T;

@@ -79,10 +79,9 @@ export default function PoemPage({ params }: PoemPageProps) {
             </div>
             <Tags tags={poem.tag_names} />
             <button className="w-full rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">REPORT CONTENT</button>
-            <div className="border border-gray-200 bg-white p-5 shadow-sm"><h2 className="text-lg font-semibold text-black">Reviews</h2><p className="mt-2 text-sm text-gray-500">Reviews are not available yet.</p></div>
-            <ContentComments type="poem" contentId={poem.id} />
           </div>
         </div>
+        <div className="mx-auto max-w-6xl px-8 pb-16"><ContentComments type="poem" contentId={poem.id} /></div>
       </section>
     </div>
   );

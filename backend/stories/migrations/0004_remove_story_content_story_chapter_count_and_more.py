@@ -4,6 +4,27 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def create_initial_chapters(apps, schema_editor):
+    Story = apps.get_model("stories", "Story")
+    Chapter = apps.get_model("stories", "Chapter")
+    database = schema_editor.connection.alias
+
+    stories = Story.objects.using(database).filter(status="published").exclude(content="")
+    for story in stories.iterator():
+        if Chapter.objects.using(database).filter(story_id=story.pk).exists():
+            continue
+        if not story.content or not story.content.strip():
+            continue
+        Chapter.objects.using(database).create(
+            story_id=story.pk,
+            title=story.title,
+            chapter_number=1,
+            order=1,
+            content=story.content,
+        )
+        Story.objects.using(database).filter(pk=story.pk).update(chapter_count=1)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -11,10 +32,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='story',
-            name='content',
-        ),
         migrations.AddField(
             model_name='story',
             name='chapter_count',
@@ -41,5 +58,10 @@ class Migration(migrations.Migration):
                 'ordering': ['order'],
                 'unique_together': {('story', 'order')},
             },
+        ),
+        migrations.RunPython(create_initial_chapters, migrations.RunPython.noop),
+        migrations.RemoveField(
+            model_name='story',
+            name='content',
         ),
     ]

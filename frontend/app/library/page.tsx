@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import CurrentReads from "@/components/Library/CurrentReads";
 import Bookmarks from "@/components/Library/Bookmarks";
 import History from "@/components/Library/History";
 import Drafts from "@/components/Library/Drafts";
 
-type TabType = "current" | "Bookmarks" | "history" | "collections" | "drafts";
+type TabType =  "Bookmarks" | "history" | "collections" | "drafts";
 
 // Dummy data mimicking a JSON API response
 const trendingTags = [
@@ -21,12 +20,11 @@ const trendingTags = [
 ];
 
 export default function LibraryPage() {
-    const [activeTab, setActiveTab] = useState<TabType>("current");
+    const [activeTab, setActiveTab] = useState<TabType>("Bookmarks");
 
     const renderContent = () => {
         switch (activeTab) {
-            case "current":
-                return <CurrentReads />;
+            
             case "Bookmarks":
                 return <Bookmarks />;
             case "history":
@@ -48,15 +46,7 @@ export default function LibraryPage() {
                 </h2>
 
                 <nav className="space-y-2">
-                    <button
-                        onClick={() => setActiveTab("current")}
-                        className={`w-full text-left text-black px-4 py-2 rounded-lg ${activeTab === "current"
-                            ? "bg-blue-50 text-blue-600 font-medium"
-                            : "hover:bg-gray-300"
-                            }`}
-                    >
-                        Current Reads
-                    </button>
+                    
 
                     <button
                         onClick={() => setActiveTab("Bookmarks")}

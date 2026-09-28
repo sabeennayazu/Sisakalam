@@ -57,10 +57,11 @@ def liked_content(request):
 class CommentSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="user.username", read_only=True)
     is_owner = serializers.SerializerMethodField()
+    rating = serializers.IntegerField(min_value=1, max_value=5, required=True)
 
     class Meta:
         model = Comment
-        fields = ["id", "user", "author_name", "is_owner", "story", "poem", "parent", "body", "created_at", "updated_at"]
+        fields = ["id", "user", "author_name", "is_owner", "story", "poem", "parent", "body", "rating", "created_at", "updated_at"]
         read_only_fields = ["id", "user", "author_name", "created_at", "updated_at"]
 
     def get_is_owner(self, obj):

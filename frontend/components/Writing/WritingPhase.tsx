@@ -9,6 +9,7 @@ interface WritingPhaseProps {
   onPhaseChange: (phase: Phase) => void;
   onSaveDraft: () => void;
   isSaving: boolean;
+  saveError?: string | null;
   publishErrors: PublishErrors;
 }
 
@@ -18,6 +19,7 @@ export default function WritingPhase({
   onPhaseChange,
   onSaveDraft,
   isSaving,
+  saveError,
   publishErrors,
 }: WritingPhaseProps) {
   const contentRef = useRef<HTMLTextAreaElement>(null);
@@ -152,6 +154,7 @@ useEffect(() => {
                 Saving...
               </span>
             )}
+           {saveError && <span className="text-xs text-red-600">{saveError}</span>}
            {isMounted && !isSaving && draft.lastSaved && (
   <span className="text-xs text-gray-400">
     Saved at{" "}

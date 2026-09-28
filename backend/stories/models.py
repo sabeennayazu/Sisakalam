@@ -94,15 +94,7 @@ class Story(models.Model):
         from django.utils import timezone
         self.status = StoryStatus.PUBLISHED
         self.published_at = timezone.now()
-        self.save()
-        if not self.chapters.exists():
-            Chapter.objects.create(
-                story=self,
-                title=self.title,
-                chapter_number=1,
-                order=1,
-                content="",
-            )
+        self.save(update_fields=["status", "published_at", "updated_at"])
 
     def __str__(self):
         return self.title
@@ -127,6 +119,7 @@ class Chapter(models.Model):
         ordering = ["order"]
         constraints = [
             models.UniqueConstraint(fields=["story", "slug"], name="unique_story_chapter_slug"),
+            models.UniqueConstraint(fields=["story", "chapter_number"], name="unique_story_chapter_number"),
         ]
 
     def save(self, *args, **kwargs):

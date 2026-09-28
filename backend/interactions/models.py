@@ -42,11 +42,16 @@ class Comment(models.Model):
     poem = models.ForeignKey(Poem, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='replies', null=True, blank=True)
     body = models.TextField()
+    rating = models.PositiveSmallIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['story', 'created_at'], name='interactions_story_cmt_idx'),
+            models.Index(fields=['poem', 'created_at'], name='interactions_poem_cmt_idx'),
+        ]
 
     def __str__(self):
         if self.story:
