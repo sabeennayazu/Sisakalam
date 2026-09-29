@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import WorksTab from "./WorksTab";
 import PoemsTab from "./PoemsTab";
 import StoriesTab from "./StoriesTab";
 import SavedTab from "./SavedTab";
 import LikedTab from "./LikedTab";
-import { deleteProfileContent, getLikedProfileContent, getMyPoems, getMyStories, getSavedProfileContent, getUserPoems, getUserStories, toggleProfileContentPrivacy, type ProfileContent } from "@/utils/profile.api";
+import { deleteProfileContent, getBookmarkedProfileContent, getLikedProfileContent, getMyPoems, getMyStories, getUserPoems, getUserStories, toggleProfileContentPrivacy, type ProfileContent } from "@/utils/profile.api";
 import type { Profile } from "@/utils/account.api";
 
-const ownerTabs = ["Poems", "Stories", "Saved", "Liked"] as const;
-const publicTabs = ["Poems", "Stories", "Saved", "Liked"] as const;
+const ownerTabs = ["Works", "Poems", "Stories", "Bookmarks", "Liked"] as const;
+const publicTabs = ["Poems", "Stories", "Bookmarks", "Liked"] as const;
 type TabName = (typeof ownerTabs)[number];
 
 interface DataState { data: ProfileContent[] | null; loading: boolean; error: string | null; }
@@ -19,7 +20,7 @@ export default function ProfileTabs({ profile, isOwner }: { profile: Profile; is
   const [activeTab, setActiveTab] = useState<TabName>("Poems");
   const [poems, setPoems] = useState<DataState>(initialState);
   const [stories, setStories] = useState<DataState>(initialState);
-  const [saved, setSaved] = useState<DataState>(initialState);
+  const [bookmarks, setBookmarks] = useState<DataState>(initialState);
   const [liked, setLiked] = useState<DataState>(initialState);
   const tabs = isOwner ? ownerTabs : publicTabs;
 
@@ -47,12 +48,15 @@ export default function ProfileTabs({ profile, isOwner }: { profile: Profile; is
         if (!cancelled) setState({ data: null, loading: false, error: `Unable to load ${label}. Please try again.` });
       }
     };
-    if (activeTab === "Poems") {
+    if (activeTab === "Works") {
+      void load(poems, setPoems, isOwner ? () => getMyPoems() : () => getUserPoems(profile.id), "works");
+      void load(stories, setStories, isOwner ? () => getMyStories() : () => getUserStories(profile.id), "works");
+    } else if (activeTab === "Poems") {
       void load(poems, setPoems, isOwner ? () => getMyPoems() : () => getUserPoems(profile.id), "poems");
     } else if (activeTab === "Stories") {
       void load(stories, setStories, isOwner ? () => getMyStories() : () => getUserStories(profile.id), "stories");
-    } else if (isOwner && activeTab === "Saved") {
-      void load(saved, setSaved, getSavedProfileContent, "saved posts");
+    } else if (isOwner && activeTab === "Bookmarks") {
+      void load(bookmarks, setBookmarks, getBookmarkedProfileContent, "bookmarks");
     } else if (isOwner && activeTab === "Liked") {
       void load(liked, setLiked, getLikedProfileContent, "liked posts");
     }
@@ -62,9 +66,10 @@ export default function ProfileTabs({ profile, isOwner }: { profile: Profile; is
   return <div className="mx-auto mb-20 w-full max-w-5xl px-4">
     <div className="mb-10 flex justify-center border-b border-gray-200"><nav className="flex gap-8">{tabs.map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} className={`relative pb-4 text-xs font-bold uppercase tracking-widest ${activeTab === tab ? "text-black" : "text-gray-400 hover:text-gray-800"}`}>{tab}{activeTab === tab && <div className="absolute bottom-0 left-0 h-0.5 w-full bg-black" />}</button>)}</nav></div>
     <div className="min-h-[400px]">
+      {activeTab === "Works" && <WorksTab poems={poems.data} stories={stories.data} loading={poems.loading || stories.loading} error={poems.error || stories.error} />}
       {activeTab === "Poems" && <PoemsTab poems={poems.data} loading={poems.loading} error={poems.error} isOwner={isOwner} viewerId={profile.id} onDelete={deleteItem} onTogglePrivacy={togglePrivacy} />}
       {activeTab === "Stories" && <StoriesTab stories={stories.data} loading={stories.loading} error={stories.error} isOwner={isOwner} viewerId={profile.id} onDelete={deleteItem} onTogglePrivacy={togglePrivacy} />}
-      {activeTab === "Saved" && (isOwner ? <SavedTab items={saved.data} loading={saved.loading} error={saved.error} /> : <PrivateTab label="saved" />)}
+      {activeTab === "Bookmarks" && (isOwner ? <SavedTab items={bookmarks.data} loading={bookmarks.loading} error={bookmarks.error} /> : <PrivateTab label="bookmarks" />)}
       {activeTab === "Liked" && (isOwner ? <LikedTab items={liked.data} loading={liked.loading} error={liked.error} /> : <PrivateTab label="liked" />)}
     </div>
   </div>;

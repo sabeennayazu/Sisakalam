@@ -5,14 +5,14 @@ import Link from "next/link";
 import { getCurrentUser } from "@/utils/account.api";
 import { getMediaUrl } from "@/utils/api";
 import { getStory, getStoryChapters } from "@/utils/stories.api";
-import type { ChapterApiRecord, StoryApiRecord } from "@/types";
+import type { ChapterReferenceApiRecord, StoryApiRecord } from "@/types";
 import ContentComments from "@/components/Comments/ContentComments";
 
 interface StoryPageProps { params: Promise<{ id: string }> }
 
 export default function StoryPage({ params }: StoryPageProps) {
   const [story, setStory] = useState<StoryApiRecord | null>(null);
-  const [chapters, setChapters] = useState<ChapterApiRecord[]>([]);
+  const [chapters, setChapters] = useState<ChapterReferenceApiRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState(false);
@@ -24,7 +24,7 @@ export default function StoryPage({ params }: StoryPageProps) {
       try {
         const [storyResponse, chapterResponse] = await Promise.all([
           getStory<StoryApiRecord>(id),
-          getStoryChapters<ChapterApiRecord[]>(id),
+          getStoryChapters<ChapterReferenceApiRecord[]>(id, true),
         ]);
         if (cancelled) return;
         if (storyResponse.status !== "published") { setNotFound(true); return; }
@@ -70,7 +70,6 @@ export default function StoryPage({ params }: StoryPageProps) {
               <div className="mb-8 flex flex-wrap gap-8 md:gap-12"><Stat label="Views" value={story.views} /><Stat label="Likes" value={story.likes} /><Stat label="Chapters" value={chapters.length} /></div>
               <div className="flex flex-wrap items-center gap-4">
                 {chapters[0] && <Link href={`/stories/${story.id}/${chapters[0].slug}`} className="rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black transition-colors hover:bg-gray-100">Read Now</Link>}
-                {currentUserId === story.author && <Link href={`/write?storyId=${story.id}&mode=chapter`} className="rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/5">Add Chapter</Link>}
                 <button className="rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/5">Add to Bookmark</button>
                 <button className="rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/5">Like</button>
               </div>
@@ -78,8 +77,9 @@ export default function StoryPage({ params }: StoryPageProps) {
           </div>
         </div>
       </section>
+      {/* chapter list */}
       <section className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-8 py-16 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="lg:col-span-2"><h2 className="mb-8 text-3xl font-bold text-gray-900">Chapters ({chapters.length})</h2>{chapters.length === 0 ? <p className="text-gray-500">No chapters have been published yet.</p> : <div className="grid gap-3 sm:grid-cols-2">{chapters.map((chapter) => <Link key={chapter.id} href={`/stories/${story.id}/${chapter.slug}`} className="group rounded-lg border border-gray-200 p-4 transition-colors hover:border-blue-600 hover:bg-blue-50"><h3 className="font-semibold text-gray-900 group-hover:text-blue-600">Chapter {chapter.chapter_number}</h3><p className="line-clamp-1 text-sm text-gray-600">{chapter.title}</p><p className="mt-2 text-xs text-gray-500">{new Date(chapter.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p></Link>)}</div>}<div className="mt-10"><ContentComments type="story" contentId={story.id} /></div></div>
+        <div className="lg:col-span-2">{currentUserId === story.author && <Link href={`/write?storyId=${story.id}&mode=chapter`} className="mb-6 inline-flex rounded-full border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-100">+ Add Chapter</Link>}<h2 className="mb-8 text-3xl font-bold text-gray-900">Chapters ({chapters.length})</h2>{chapters.length === 0 ? <p className="text-gray-500">No chapters have been published yet.</p> : <div className="grid gap-3 sm:grid-cols-2">{chapters.map((chapter) => <Link key={chapter.id} href={`/stories/${story.id}/${chapter.slug}`} className="group rounded-lg border border-gray-200 p-4 transition-colors hover:border-blue-600 hover:bg-blue-50"><h3 className="font-semibold text-gray-900 group-hover:text-blue-600">Chapter {chapter.chapter_number}</h3><p className="line-clamp-1 text-sm text-gray-600">{chapter.title}</p><p className="mt-2 text-xs text-gray-500">{new Date(chapter.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p></Link>)}</div>}<div className="mt-10"><ContentComments type="story" contentId={story.id} /></div></div>
       </section>
     </div>
   );

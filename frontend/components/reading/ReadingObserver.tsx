@@ -1,12 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface ReadingObserverProps {
-  onNearBottom: () => void;
-  onNearTop: () => void;
-  bottomThreshold?: number;
-  topThreshold?: number;
+  edge: 'top' | 'bottom';
+  onIntersect: () => void;
 }
 
 /**
@@ -14,68 +12,24 @@ interface ReadingObserverProps {
  * is near the top or bottom of the reading area.
  */
 export default function ReadingObserver({
-  onNearBottom,
-  onNearTop,
-  bottomThreshold = 0.5,
-  topThreshold = 0.5,
+  edge,
+  onIntersect,
 }: ReadingObserverProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const topRef = useRef<HTMLDivElement>(null);
-
-  const handleBottomIntersection = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          onNearBottom();
-        }
-      });
-    },
-    [onNearBottom],
-  );
-
-  const handleTopIntersection = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          onNearTop();
-        }
-      });
-    },
-    [onNearTop],
-  );
+  const targetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const bottomObserver = new IntersectionObserver(
-      handleBottomIntersection,
-      {
-        threshold: bottomThreshold,
-        rootMargin: '200px',
-      },
-    );
-
-    const topObserver = new IntersectionObserver(handleTopIntersection, {
-      threshold: topThreshold,
-      rootMargin: '200px',
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) onIntersect();
+    }, {
+      rootMargin: '300px 0px',
     });
 
-    if (bottomRef.current) {
-      bottomObserver.observe(bottomRef.current);
-    }
+    if (targetRef.current) observer.observe(targetRef.current);
 
-    if (topRef.current) {
-      topObserver.observe(topRef.current);
-    }
-
-    return () => {
-      bottomObserver.disconnect();
-      topObserver.disconnect();
-    };
-  }, [handleBottomIntersection, handleTopIntersection, bottomThreshold, topThreshold]);
+    return () => observer.disconnect();
+  }, [onIntersect]);
 
   return (
-    <>
-      <div ref={topRef} className="h-px w-full" data-observer="top" />
-      <div ref={bottomRef} className="h-px w-full" data-observer="bottom" />
-    </>
+    <div ref={targetRef} className="h-px w-full" data-observer={edge} />
   );
 }

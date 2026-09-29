@@ -8,8 +8,12 @@ interface WritingPhaseProps {
   onUpdateDraft: (updates: Partial<WritingDraft>) => void;
   onPhaseChange: (phase: Phase) => void;
   onSaveDraft: () => void;
+  onPublish: () => void;
+  chapterMode?: boolean;
   isSaving: boolean;
+  isPublishing: boolean;
   saveError?: string | null;
+  saveSuccess?: string | null;
   publishErrors: PublishErrors;
 }
 
@@ -18,8 +22,12 @@ export default function WritingPhase({
   onUpdateDraft,
   onPhaseChange,
   onSaveDraft,
+  onPublish,
+  chapterMode = false,
   isSaving,
+  isPublishing,
   saveError,
+  saveSuccess,
   publishErrors,
 }: WritingPhaseProps) {
   const contentRef = useRef<HTMLTextAreaElement>(null);
@@ -78,10 +86,10 @@ useEffect(() => {
             <div className="mb-12">
               <div className="flex items-center justify-between mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">
-                  {draft.type ? `Writing a ${draft.type === "story" ? "Story" : "Poem"}` : "What do you want to create?"}
+                  {chapterMode ? "Writing a Chapter" : draft.type ? `Writing a ${draft.type === "story" ? "Story" : "Poem"}` : "What do you want to create?"}
                 </h1>
               </div>
-              <div className="inline-flex bg-gray-100 rounded-full p-1 gap-1 mb-12">
+              {!chapterMode && <div className="inline-flex bg-gray-100 rounded-full p-1 gap-1 mb-12">
                 <button
                   onClick={() => handleContentTypeSelect("story")}
                   className={`px-6 py-2 rounded-full font-medium transition-all ${
@@ -102,8 +110,8 @@ useEffect(() => {
                 >
                    Poem
                 </button>
-              </div>
-              {publishErrors.type && <p className="-mt-10 mb-8 text-sm text-red-600">{publishErrors.type}</p>}
+              </div>}
+              {!chapterMode && publishErrors.type && <p className="-mt-10 mb-8 text-sm text-red-600">{publishErrors.type}</p>}
             </div>
 
             {/* TITLE */}
@@ -155,6 +163,7 @@ useEffect(() => {
               </span>
             )}
            {saveError && <span className="text-xs text-red-600">{saveError}</span>}
+           {saveSuccess && <span role="status" className="text-xs text-emerald-700">{saveSuccess}</span>}
            {isMounted && !isSaving && draft.lastSaved && (
   <span className="text-xs text-gray-400">
     Saved at{" "}
@@ -172,13 +181,23 @@ useEffect(() => {
             >
               {isSaving ? "Saving..." : "Save as Draft"}
             </button>
-            <button
-              onClick={() => onPhaseChange("metadata")}
-              disabled={!canContinue}
-              className="px-6 py-3 text-sm font-medium text-white bg-black hover:bg-gray-900 disabled:bg-gray-300 rounded-full transition-colors"
-            >
-              Continue to Settings →
-            </button>
+            {chapterMode ? (
+              <button
+                onClick={onPublish}
+                disabled={!canContinue || isPublishing}
+                className="px-6 py-3 text-sm font-medium text-white bg-black hover:bg-gray-900 disabled:bg-gray-300 rounded-full transition-colors"
+              >
+                {isPublishing ? "Publishing..." : "Publish Chapter"}
+              </button>
+            ) : (
+              <button
+                onClick={() => onPhaseChange("metadata")}
+                disabled={!canContinue}
+                className="px-6 py-3 text-sm font-medium text-white bg-black hover:bg-gray-900 disabled:bg-gray-300 rounded-full transition-colors"
+              >
+                Continue to Settings →
+              </button>
+            )}
           </div>
         </div>
       </div>

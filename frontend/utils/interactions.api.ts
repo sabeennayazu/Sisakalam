@@ -152,8 +152,8 @@ export const deleteComment = async (commentId: string | number) => {
  * @returns A list of comments.
  * @requiresAuthentication false
  */
-export const getComments = async (targetType: string, targetId: string | number) => {
-  return apiFetch("/interactions/comments/", { query: { [targetType]: targetId } });
+export const getComments = async (targetType: string, targetId: string | number, sort: "most_liked" | "newest" = "most_liked") => {
+  return apiFetch("/interactions/comments/", { query: { [targetType]: targetId, sort } });
 };
 
 /**

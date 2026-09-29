@@ -1,22 +1,33 @@
 'use client';
 
-import { forwardRef, LegacyRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { ChapterData } from '@/hooks/useContinuousChapters';
 
 interface ChapterContentProps {
   chapter: ChapterData;
   highlightTitle?: boolean;
+  onVisible: (chapterNumber: number) => void;
 }
 
-const ChapterContent = forwardRef<HTMLDivElement, ChapterContentProps>(
-  ({ chapter, highlightTitle = false }, ref: LegacyRef<HTMLDivElement>) => {
-    return (
+export default function ChapterContent({ chapter, highlightTitle = false, onVisible }: ChapterContentProps) {
+  const markerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) onVisible(chapter.chapter_number);
+    }, { rootMargin: '-15% 0px -75% 0px' });
+    if (markerRef.current) observer.observe(markerRef.current);
+    return () => observer.disconnect();
+  }, [chapter.chapter_number, onVisible]);
+
+  return (
       <article
-        ref={ref}
+        id={`chapter-${chapter.chapter_number}`}
         className="mb-16 scroll-mt-16"
         data-chapter-id={chapter.id}
         data-chapter-number={chapter.chapter_number}
       >
+        <div ref={markerRef} className="h-px" />
         {/* Chapter Title - Sticky on scroll */}
         <div
           className={`mb-8 ${
@@ -52,9 +63,4 @@ const ChapterContent = forwardRef<HTMLDivElement, ChapterContentProps>(
         </div>
       </article>
     );
-  },
-);
-
-ChapterContent.displayName = 'ChapterContent';
-
-export default ChapterContent;
+}

@@ -1,10 +1,10 @@
 'use client';
 
-import { ChapterData } from '@/hooks/useContinuousChapters';
+import { ChapterReference } from '@/hooks/useContinuousChapters';
 import { Book } from 'lucide-react';
 
 interface ChapterListPanelProps {
-  chapters: ChapterData[];
+  chapters: ChapterReference[];
   currentChapterNumber: number;
   onSelectChapter: (chapterNumber: number) => void;
   isOpen: boolean;

@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { getMediaUrl } from "@/utils/api";
 import { getPoem } from "@/utils/poems.api";
-import PoemStats from "@/components/Poems/PoemStats";
-import Tags from "@/components/Poems/Tags";
 import type { PoemApiRecord } from "@/types";
 import ContentComments from "@/components/Comments/ContentComments";
 
@@ -72,14 +70,7 @@ export default function PoemPage({ params }: PoemPageProps) {
             <p className="mb-6 text-xs font-semibold uppercase tracking-widest text-gray-600">The Poem</p>
             {poem.content.split("\n\n").map((paragraph, index) => <p key={index} className="mb-6 whitespace-pre-wrap leading-8 text-gray-800">{paragraph}</p>)}
           </div>
-          <div className="space-y-6">
-            <div>
-              <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-gray-600">Stats & Rating</p>
-              <PoemStats rating={4.92} reviewCount={892} publicationDate={new Date(poem.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })} wordCount={wordCount} readingTime={Math.ceil(wordCount / 200)} />
-            </div>
-            <Tags tags={poem.tag_names} />
-            <button className="w-full rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">REPORT CONTENT</button>
-          </div>
+          
         </div>
         <div className="mx-auto max-w-6xl px-8 pb-16"><ContentComments type="poem" contentId={poem.id} /></div>
       </section>

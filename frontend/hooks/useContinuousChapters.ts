@@ -1,24 +1,34 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 export interface ChapterData {
-  id: string;
+  id: number;
+  slug: string;
   title: string;
   chapter_number: number;
   content: string;
-  next_chapter?: string | null;
-  previous_chapter?: string | null;
   created_at: string;
 }
+
+export interface ChapterReference {
+  id: number;
+  slug: string;
+  title: string;
+  chapter_number: number;
+  created_at: string;
+}
+
+export type ChapterDirection = 'next' | 'previous';
 
 interface UseContinuousChaptersReturn {
   chapters: ChapterData[];
   currentChapterNumber: number;
   isLoading: boolean;
   error: string | null;
-  loadMoreChapters: () => Promise<void>;
-  addChapter: (chapter: ChapterData) => void;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  loadMoreChapters: (direction: ChapterDirection) => Promise<void>;
+  loadChapter: (chapterNumber: number) => Promise<ChapterData | null>;
   setCurrentChapter: (chapterNumber: number) => void;
-  prependChapter: (chapter: ChapterData) => void;
 }
 
 /**
@@ -26,51 +36,51 @@ interface UseContinuousChaptersReturn {
  * Keeps track of loaded chapters and handles pagination.
  */
 export function useContinuousChapters(
-  initialChapters: ChapterData[] = [],
+  initialChapters: ChapterData[],
+  chapterIndex: ChapterReference[],
+  initialChapterNumber: number,
+  fetchChapter: (slug: string) => Promise<ChapterData>,
   onChapterChange?: (chapterNumber: number) => void,
 ): UseContinuousChaptersReturn {
   const [chapters, setChapters] = useState<ChapterData[]>(initialChapters);
-  const [currentChapterNumber, setCurrentChapterNumber] = useState(
-    initialChapters[0]?.chapter_number ?? 1,
-  );
+  const [currentChapterNumber, setCurrentChapterNumber] = useState(initialChapterNumber);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadingRef = useRef(false);
 
-  // Load next chapters
-  const loadMoreChapters = useCallback(async () => {
+  const loadChapter = useCallback(async (chapterNumber: number) => {
+    const loadedChapter = chapters.find((chapter) => chapter.chapter_number === chapterNumber);
+    if (loadedChapter) return loadedChapter;
+    const reference = chapterIndex.find((chapter) => chapter.chapter_number === chapterNumber);
+    if (!reference || loadingRef.current) return null;
+    loadingRef.current = true;
+    setIsLoading(true);
+    setError(null);
     try {
-      setIsLoading(true);
-      setError(null);
-
-      if (chapters.length === 0) return;
-
-      const lastChapter = chapters[chapters.length - 1];
-      if (!lastChapter.next_chapter) {
-        setError('No more chapters available');
-        return;
-      }
-
-      // TODO: Replace with actual API call
-      // For now, this is a placeholder to be called by parent component
-      // const response = await fetch(`/api/chapters/${lastChapter.next_chapter}`);
-      // const data = await response.json();
-      // setChapters(prev => [...prev, data]);
+      const chapter = await fetchChapter(reference.slug);
+      setChapters((current) => {
+        if (current.some((item) => item.id === chapter.id)) return current;
+        return [...current, chapter].sort((left, right) => left.chapter_number - right.chapter_number);
+      });
+      return chapter;
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load chapters',
-      );
+      setError(err instanceof Error ? err.message : 'Failed to load chapters.');
+      return null;
     } finally {
+      loadingRef.current = false;
       setIsLoading(false);
     }
-  }, [chapters]);
+  }, [chapterIndex, chapters, fetchChapter]);
 
-  const addChapter = useCallback((chapter: ChapterData) => {
-    setChapters((prev) => [...prev, chapter]);
-  }, []);
-
-  const prependChapter = useCallback((chapter: ChapterData) => {
-    setChapters((prev) => [chapter, ...prev]);
-  }, []);
+  const loadMoreChapters = useCallback(async (direction: ChapterDirection) => {
+    if (chapters.length === 0) return;
+    const loadedNumbers = chapters.map((chapter) => chapter.chapter_number);
+    const boundary = direction === 'next' ? Math.max(...loadedNumbers) : Math.min(...loadedNumbers);
+    const reference = direction === 'next'
+      ? chapterIndex.find((chapter) => chapter.chapter_number > boundary)
+      : [...chapterIndex].reverse().find((chapter) => chapter.chapter_number < boundary);
+    if (reference) await loadChapter(reference.chapter_number);
+  }, [chapterIndex, chapters, loadChapter]);
 
   const handleSetCurrentChapter = useCallback(
     (chapterNumber: number) => {
@@ -85,9 +95,10 @@ export function useContinuousChapters(
     currentChapterNumber,
     isLoading,
     error,
+    hasPrevious: chapters.length > 0 && chapterIndex.some((chapter) => chapter.chapter_number < Math.min(...chapters.map((item) => item.chapter_number))),
+    hasNext: chapters.length > 0 && chapterIndex.some((chapter) => chapter.chapter_number > Math.max(...chapters.map((item) => item.chapter_number))),
     loadMoreChapters,
-    addChapter,
+    loadChapter,
     setCurrentChapter: handleSetCurrentChapter,
-    prependChapter,
   };
 }

@@ -52,6 +52,7 @@ export default function WritePage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishErrors, setPublishErrors] = useState<PublishErrors>({});
   const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
@@ -61,7 +62,14 @@ export default function WritePage() {
     getStory<StoryApiRecord>(chapterStoryId)
       .then((story) => {
         setParentStory(story);
-        setDraft((current) => ({ ...current, type: "story", title: `Chapter ${story.chapter_count + 1}`, genre: story.genre_name ?? "", genreId: story.genre, synopsis: story.synopsis }));
+        let savedChapterDraft: Partial<Pick<WritingDraft, "title" | "content">> = {};
+        try {
+          const saved = localStorage.getItem(`chapter-draft:${story.id}`);
+          if (saved) savedChapterDraft = JSON.parse(saved) as typeof savedChapterDraft;
+        } catch {
+          localStorage.removeItem(`chapter-draft:${story.id}`);
+        }
+        setDraft((current) => ({ ...current, ...savedChapterDraft, type: "story", title: savedChapterDraft.title || `Chapter ${story.chapter_count + 1}`, genre: story.genre_name ?? "", genreId: story.genre, synopsis: story.synopsis }));
       })
       .catch(() => setPublishErrors({ general: "Unable to load the parent story." }));
   }, [chapterStoryId]);
@@ -90,6 +98,8 @@ export default function WritePage() {
   }, [chapterStoryId, draft]);
 
   const handleUpdateDraft = (updates: Partial<WritingDraft>) => {
+    setSaveSuccess(null);
+    setSaveError(null);
     setDraft((prev) => ({
       ...prev,
       ...updates,
@@ -126,12 +136,15 @@ export default function WritePage() {
     setIsPublishing(true);
     setPublishErrors({});
     setPublishSuccess(null);
+    setSaveError(null);
+    setSaveSuccess(null);
 
     if (chapterStoryId && parentStory) {
       try {
-        await createChapter(chapterStoryId, { title: draft.title.trim(), content: draft.content });
+        const chapter = await createChapter(chapterStoryId, { title: draft.title.trim(), content: draft.content }) as { slug: string };
+        localStorage.removeItem(`chapter-draft:${parentStory.id}`);
         setPublishSuccess("Chapter published successfully.");
-        router.push(`/stories/${parentStory.id}`);
+        router.push(`/stories/${parentStory.id}/${chapter.slug}`);
       } catch (publishError) {
         setPublishErrors({ general: publishError instanceof Error ? publishError.message : "Unable to publish chapter." });
       } finally {
@@ -161,6 +174,22 @@ export default function WritePage() {
 
   const handleSaveDraft = async () => {
     if (isSaving || !draft.type) return;
+
+    if (chapterStoryId) {
+      setIsSaving(true);
+      setSaveError(null);
+      setSaveSuccess(null);
+      try {
+        localStorage.setItem(`chapter-draft:${chapterStoryId}`, JSON.stringify({ title: draft.title, content: draft.content }));
+        setDraft((current) => ({ ...current, lastSaved: new Date() }));
+        setSaveSuccess("Chapter draft saved on this device.");
+      } catch {
+        setSaveError("Unable to save this chapter draft on this device.");
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
 
     const payload = draft.type === "poem"
       ? {
@@ -203,14 +232,18 @@ export default function WritePage() {
     <div className="min-h-screen bg-white">
       {publishErrors.general && <p className="mx-auto max-w-5xl px-8 pt-6 text-sm text-red-600">{publishErrors.general}</p>}
       {chapterStoryId && parentStory && <p className="mx-auto max-w-5xl px-8 pt-6 text-sm font-semibold text-gray-600">Adding a chapter to {parentStory.title}</p>}
-      {phase === "writing" ? (
+      {chapterStoryId || phase === "writing" ? (
         <WritingPhase
           draft={draft}
           onUpdateDraft={handleUpdateDraft}
           onPhaseChange={setPhase}
           onSaveDraft={handleSaveDraft}
+          onPublish={handlePublish}
+          chapterMode={Boolean(chapterStoryId)}
           isSaving={isSaving}
+          isPublishing={isPublishing}
           saveError={saveError}
+          saveSuccess={saveSuccess}
           publishErrors={publishErrors}
         />
       ) : (

@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from poems.models import Poem
-from stories.models import Genre, Story
+from stories.models import Chapter, Genre, Story
 from .models import Bookmark, Comment, Like
 
 
@@ -73,3 +73,62 @@ class InteractionContentListTests(APITestCase):
 		)
 		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 		self.assertFalse(Comment.objects.filter(story=self.story).exists())
+
+	def test_chapter_comments_support_unrated_posts_and_sorting(self):
+		from datetime import timedelta
+		from django.utils import timezone
+
+		chapter = Chapter.objects.create(
+			story=self.story,
+			title="First Chapter",
+			chapter_number=1,
+			order=1,
+			content="Chapter content",
+		)
+		created = self.client.post(
+			reverse("comments"),
+			{"chapter": chapter.id, "body": "A chapter comment."},
+			format="json",
+		)
+		self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+		self.assertIsNone(created.data["rating"])
+		self.assertEqual(created.data["like_count"], 0)
+
+		base_time = timezone.now() - timedelta(days=1)
+		older = Comment.objects.create(user=self.user, chapter=chapter, body="Older tie", like_count=2)
+		newer = Comment.objects.create(user=self.user, chapter=chapter, body="Newer tie", like_count=2)
+		most_liked = Comment.objects.create(user=self.user, chapter=chapter, body="Most liked", like_count=5)
+		Comment.objects.filter(pk=older.pk).update(created_at=base_time)
+		Comment.objects.filter(pk=newer.pk).update(created_at=base_time + timedelta(seconds=1))
+		Comment.objects.filter(pk=most_liked.pk).update(created_at=base_time + timedelta(seconds=2))
+
+		most_liked_response = self.client.get(reverse("comments"), {"chapter": chapter.id})
+		newest_response = self.client.get(reverse("comments"), {"chapter": chapter.id, "sort": "newest"})
+		self.assertEqual(most_liked_response.status_code, status.HTTP_200_OK)
+		self.assertEqual(
+			[item["id"] for item in most_liked_response.data],
+			[most_liked.id, newer.id, older.id, created.data["id"]],
+		)
+		self.assertEqual(
+			[item["id"] for item in newest_response.data],
+			[created.data["id"], most_liked.id, newer.id, older.id],
+		)
+
+	def test_chapter_comments_must_target_a_published_chapter(self):
+		chapter = Chapter.objects.create(
+			story=self.story,
+			title="First Chapter",
+			chapter_number=1,
+			order=1,
+			content="Chapter content",
+		)
+		self.story.status = "draft"
+		self.story.save(update_fields=["status"])
+
+		response = self.client.post(
+			reverse("comments"),
+			{"chapter": chapter.id, "body": "Unavailable comment."},
+			format="json",
+		)
+		self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+		self.assertFalse(Comment.objects.filter(chapter=chapter).exists())

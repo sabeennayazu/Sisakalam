@@ -140,6 +140,14 @@ class StoriesEndpointTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["content"], "Original story content")
 
+        index_response = self.client.get(
+            reverse("story-chapters", kwargs={"story_id": story.id}),
+            {"metadata": 1},
+        )
+        self.assertEqual(index_response.status_code, status.HTTP_200_OK)
+        self.assertNotIn("content", index_response.data[0])
+        self.assertEqual(index_response.data[0]["slug"], chapter.slug)
+
     def test_only_story_owner_can_create_sequential_chapters(self):
         from django.contrib.auth import get_user_model
         from stories.models import Chapter, Genre, Story
@@ -159,7 +167,8 @@ class StoriesEndpointTests(APITestCase):
         self.assertEqual(denied_delete.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_authenticate(user=owner)
-        created = self.client.post(reverse("story-chapters", kwargs={"story_id": story.id}), {"title": "Second", "content": "Two"}, format="json")
+        created = self.client.post(reverse("story-chapters", kwargs={"story_id": story.id}), {"title": "Second", "slug": "caller-supplied", "content": "Two"}, format="json")
         self.assertEqual(created.status_code, status.HTTP_201_CREATED)
         self.assertEqual(created.data["chapter_number"], 2)
         self.assertEqual(created.data["order"], 2)
+        self.assertEqual(created.data["slug"], "second")

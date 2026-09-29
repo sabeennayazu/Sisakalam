@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Book, Settings, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import HeroSection from './HeroSection';
 import ChapterContent from './ChapterContent';
@@ -10,22 +11,25 @@ import ReadingObserver from './ReadingObserver';
 import ChapterListPanel from '@/components/sidebar/ChapterListPanel';
 import ReaderSettingsPanel from '@/components/sidebar/ReaderSettingsPanel';
 import ChapterCommentsPanel from '@/components/sidebar/ChapterCommentsPanel';
-import { ChapterData, useContinuousChapters } from '@/hooks/useContinuousChapters';
+import { ChapterData, ChapterReference, useContinuousChapters } from '@/hooks/useContinuousChapters';
 import { useReadingSettings } from '@/hooks/useReadingSettings';
+import { getStoryChapterBySlug } from '@/utils/stories.api';
+import type { ChapterApiRecord } from '@/types';
 
 interface ReadingLayoutProps {
   storyId: string;
   storyTitle: string;
-  storyImage: string;
+  storyImage: string | null;
   storyAuthor: {
     id: string;
     name: string;
-    profile_image: string;
+    profile_image?: string | null;
   };
   synopsis: string;
   likes: number;
   views: number;
   bookmarks: number;
+  chapterIndex: ChapterReference[];
   initialChapters: ChapterData[];
   initialChapterNumber: number;
 }
@@ -39,11 +43,11 @@ export default function ReadingLayout({
   likes,
   views,
   bookmarks,
+  chapterIndex,
   initialChapters,
   initialChapterNumber,
 }: ReadingLayoutProps) {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
 
   // Sidebar panels state
   const [showChapters, setShowChapters] = useState(false);
@@ -51,137 +55,78 @@ export default function ReadingLayout({
   const [showComments, setShowComments] = useState(false);
 
   // Reading state
+  const fetchChapter = useCallback(async (slug: string): Promise<ChapterData> => {
+    const chapter = await getStoryChapterBySlug<ChapterApiRecord>(storyId, slug);
+    return {
+      id: chapter.id,
+      slug: chapter.slug,
+      title: chapter.title,
+      chapter_number: chapter.chapter_number,
+      content: chapter.content,
+      created_at: chapter.created_at,
+    };
+  }, [storyId]);
+
+  const handleChapterChange = useCallback((chapterNumber: number) => {
+    const chapter = chapterIndex.find((item) => item.chapter_number === chapterNumber);
+    if (chapter) router.replace(`/stories/${storyId}/${chapter.slug}`, { scroll: false });
+  }, [chapterIndex, router, storyId]);
+
   const {
     chapters,
     currentChapterNumber,
     isLoading,
     error,
-    addChapter,
+    hasPrevious,
+    hasNext,
+    loadChapter,
     setCurrentChapter,
-    prependChapter,
-  } = useContinuousChapters(initialChapters, (chapterNumber) => {
-    router.replace(
-      `/reading/${storyId}/${chapterNumber}`,
-      { scroll: false },
-    );
-  });
+    loadMoreChapters,
+  } = useContinuousChapters(initialChapters, chapterIndex, initialChapterNumber, fetchChapter, handleChapterChange);
 
-  const { backgroundColor, getCSSVars, getBackgroundClass } =
+  const { getCSSVars, getBackgroundClass } =
     useReadingSettings();
 
   const contentRef = useRef<HTMLDivElement>(null);
-  const chapterRefsMap = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  // Hydrate on mount
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (initialChapterNumber === 1) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`chapter-${initialChapterNumber}`)?.scrollIntoView({ block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [initialChapterNumber]);
 
-  // Handle IntersectionObserver callbacks
   const handleNearBottom = useCallback(() => {
-    const currentChapter = chapters.find(
-      (ch) => ch.chapter_number === currentChapterNumber,
-    );
-
-    if (
-      currentChapter &&
-      currentChapter.next_chapter &&
-      !isLoading
-    ) {
-      // Simulate fetching next chapter
-      const nextChapterNumber = currentChapterNumber + 1;
-      const mockNextChapter: ChapterData = {
-        id: `ch-${nextChapterNumber}`,
-        title: `Chapter ${nextChapterNumber} Title`,
-        chapter_number: nextChapterNumber,
-        content:
-          'This is the content for chapter ' +
-          nextChapterNumber +
-          '. ' +
-          'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'.repeat(
-            100,
-          ),
-        next_chapter: `${nextChapterNumber + 1}`,
-        previous_chapter: `${nextChapterNumber - 1}`,
-        created_at: new Date().toISOString(),
-      };
-
-      addChapter(mockNextChapter);
-      setCurrentChapter(nextChapterNumber);
-    }
-  }, [chapters, currentChapterNumber, isLoading, addChapter, setCurrentChapter]);
+    if (hasNext && !isLoading) void loadMoreChapters('next');
+  }, [hasNext, isLoading, loadMoreChapters]);
 
   const handleNearTop = useCallback(() => {
-    if (currentChapterNumber > 1 && !isLoading) {
-      const prevChapterNumber = currentChapterNumber - 1;
-      const prevChapterExists = chapters.some(
-        (ch) => ch.chapter_number === prevChapterNumber,
-      );
+    if (hasPrevious && !isLoading) void loadMoreChapters('previous');
+  }, [hasPrevious, isLoading, loadMoreChapters]);
 
-      if (!prevChapterExists) {
-        const mockPrevChapter: ChapterData = {
-          id: `ch-${prevChapterNumber}`,
-          title: `Chapter ${prevChapterNumber} Title`,
-          chapter_number: prevChapterNumber,
-          content:
-            'This is the content for chapter ' +
-            prevChapterNumber +
-            '. ' +
-            'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'.repeat(
-              100,
-            ),
-          next_chapter: `${prevChapterNumber + 1}`,
-          previous_chapter: prevChapterNumber > 1 ? `${prevChapterNumber - 1}` : null,
-          created_at: new Date().toISOString(),
-        };
+  const handleChapterVisible = useCallback((chapterNumber: number) => {
+    setCurrentChapter(chapterNumber);
+  }, [setCurrentChapter]);
 
-        prependChapter(mockPrevChapter);
-      }
-    }
-  }, [currentChapterNumber, isLoading, chapters, prependChapter]);
+  const selectChapter = useCallback(async (chapterNumber: number) => {
+    const loadedChapter = await loadChapter(chapterNumber);
+    if (!loadedChapter) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(`chapter-${chapterNumber}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [loadChapter]);
 
   const currentChapter = chapters.find(
     (ch) => ch.chapter_number === currentChapterNumber,
   );
 
-  // Get mock comments for current chapter
-  const mockComments = [
-    {
-      id: '1',
-      chapter_id: currentChapter?.id || '',
-      user: 'Sarah Johnson',
-      avatar:
-        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
-      comment:
-        'This chapter was amazing! The plot twist at the end caught me completely off guard.',
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-      likes: 24,
-    },
-    {
-      id: '2',
-      chapter_id: currentChapter?.id || '',
-      user: 'Mike Chen',
-      avatar:
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
-      comment:
-        'Cannot wait for the next chapter! The character development in this one was stellar.',
-      created_at: new Date(Date.now() - 43200000).toISOString(),
-      likes: 18,
-    },
-  ];
-
-  // Calculate reading progress
-  const readingProgress = currentChapter
-    ? Math.round(
-        ((currentChapter.chapter_number) /
-          chapters[chapters.length - 1]?.chapter_number) *
-          100,
-      )
+  const readingProgress = chapterIndex.length
+    ? Math.round((currentChapterNumber / chapterIndex.length) * 100)
     : 0;
-
-  if (!mounted) {
-    return null;
-  }
+  const currentIndex = chapterIndex.findIndex((chapter) => chapter.chapter_number === currentChapterNumber);
+  const previousChapter = chapterIndex[currentIndex - 1];
+  const nextChapter = chapterIndex[currentIndex + 1];
 
   return (
     <div
@@ -202,6 +147,7 @@ export default function ReadingLayout({
             fontSize: 'var(--reading-font-size)',
           }}
         >
+          <Link href={`/stories/${storyId}`} className="mb-8 inline-block text-sm text-gray-500 hover:text-black">Back to {storyTitle}</Link>
           {/* Hero Section - Only for Chapter 1 */}
           {currentChapterNumber === 1 && (
             <HeroSection
@@ -216,38 +162,19 @@ export default function ReadingLayout({
           )}
 
           {/* Reading Observer - Top */}
-          <ReadingObserver onNearTop={handleNearTop} onNearBottom={() => {}} />
+          {hasPrevious && <ReadingObserver edge="top" onIntersect={handleNearTop} />}
 
-          {/* Chapters Content */}
-          <div>
-            {currentChapter && (
-              <ChapterContent
-                key={currentChapter.id}
-                chapter={currentChapter}
-                ref={(node) => {
-                  if (node)
-                    chapterRefsMap.current.set(currentChapter.chapter_number, node);
-                }}
-              />
-            )}
-          </div>
+          {chapters.map((chapter) => <ChapterContent key={chapter.id} chapter={chapter} onVisible={handleChapterVisible} />)}
 
-          {/* Loading State */}
-          <ChapterLoader isLoading={isLoading} error={error} />
+          <ChapterLoader isLoading={isLoading} error={error} onRetry={handleNearBottom} />
 
-          {/* Reading Observer - Bottom */}
-          <ReadingObserver onNearTop={() => {}} onNearBottom={handleNearBottom} />
+          {hasNext && <ReadingObserver edge="bottom" onIntersect={handleNearBottom} />}
 
-          {/* Navigation Buttons */}
-          {currentChapter && (
+          {(previousChapter || nextChapter) && (
             <div className="mt-12 flex justify-between border-t border-gray-200 pt-6">
               <button
-                onClick={() => {
-                  if (currentChapterNumber > 1) {
-                    setCurrentChapter(currentChapterNumber - 1);
-                  }
-                }}
-                disabled={currentChapterNumber === 1}
+                onClick={() => previousChapter && void selectChapter(previousChapter.chapter_number)}
+                disabled={!previousChapter}
                 className="flex items-center gap-2 rounded px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -256,26 +183,13 @@ export default function ReadingLayout({
 
               <div className="text-center text-sm text-gray-500">
                 <p>
-                  Chapter {currentChapterNumber} of{' '}
-                  {chapters[chapters.length - 1]?.chapter_number || '?'}
+                  Chapter {currentChapterNumber} of {chapterIndex.length}
                 </p>
               </div>
 
               <button
-                onClick={() => {
-                  const lastChapter = chapters[chapters.length - 1];
-                  if (
-                    lastChapter &&
-                    currentChapterNumber < lastChapter.chapter_number
-                  ) {
-                    setCurrentChapter(currentChapterNumber + 1);
-                  }
-                }}
-                disabled={
-                  !chapters[chapters.length - 1] ||
-                  currentChapterNumber >=
-                    chapters[chapters.length - 1].chapter_number
-                }
+                onClick={() => nextChapter && void selectChapter(nextChapter.chapter_number)}
+                disabled={!nextChapter}
                 className="flex items-center gap-2 rounded px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
               >
                 Next
@@ -328,9 +242,9 @@ export default function ReadingLayout({
 
       {/* Sidebar Panels */}
       <ChapterListPanel
-        chapters={chapters}
+        chapters={chapterIndex}
         currentChapterNumber={currentChapterNumber}
-        onSelectChapter={setCurrentChapter}
+        onSelectChapter={(chapterNumber) => void selectChapter(chapterNumber)}
         isOpen={showChapters}
         onClose={() => setShowChapters(false)}
       />
@@ -341,9 +255,8 @@ export default function ReadingLayout({
       />
 
       <ChapterCommentsPanel
-        chapterId={currentChapter?.id || ''}
+        chapterId={currentChapter?.id ?? null}
         chapterNumber={currentChapterNumber}
-        comments={mockComments}
         isOpen={showComments}
         onClose={() => setShowComments(false)}
       />

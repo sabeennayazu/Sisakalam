@@ -106,8 +106,8 @@ export const getDrafts = async () => {
  * @returns A list of chapters.
  * @requiresAuthentication false
  */
-export const getStoryChapters = async <T = unknown>(storyId: string | number): Promise<T> => {
-  return apiFetch<T>(`/stories/${storyId}/chapters/`);
+export const getStoryChapters = async <T = unknown>(storyId: string | number, metadataOnly = false): Promise<T> => {
+  return apiFetch<T>(`/stories/${storyId}/chapters/`, { query: { metadata: metadataOnly ? 1 : undefined } });
 };
 
 export const getStoryChapterBySlug = async <T = unknown>(storyId: string | number, slug: string): Promise<T> => {

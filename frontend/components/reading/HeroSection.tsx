@@ -5,14 +5,14 @@ import Image from 'next/image';
 interface Author {
   id: string;
   name: string;
-  profile_image: string;
+  profile_image?: string | null;
 }
 
 interface HeroSectionProps {
   title: string;
   synopsis: string;
   author: Author;
-  image: string;
+  image: string | null;
   likes: number;
   views: number;
   bookmarks: number;
@@ -30,14 +30,8 @@ export default function HeroSection({
   return (
     <section className="mb-16 flex flex-col items-center">
       {/* Story Cover */}
-      <div className="relative mb-8 h-64 w-48 overflow-hidden rounded-lg shadow-lg">
-        <Image
-          src={image}
-          alt={title}
-          fill
-          className="object-cover"
-          priority
-        />
+      <div className="relative mb-8 flex h-64 w-48 items-center justify-center overflow-hidden rounded-lg bg-gray-100 shadow-lg">
+        {image ? <Image src={image} alt={title} fill className="object-cover" priority /> : <span className="px-4 text-center font-semibold text-gray-500">{title}</span>}
       </div>
 
       {/* Story Title */}
@@ -45,13 +39,8 @@ export default function HeroSection({
 
       {/* Author Info */}
       <div className="mb-8 flex items-center gap-3">
-        <div className="relative h-10 w-10 overflow-hidden rounded-full">
-          <Image
-            src={author.profile_image}
-            alt={author.name}
-            fill
-            className="object-cover"
-          />
+        <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-gray-200">
+          {author.profile_image ? <Image src={author.profile_image} alt={author.name} fill className="object-cover" /> : <span className="text-sm font-semibold text-gray-600">{author.name.slice(0, 1).toUpperCase()}</span>}
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-900">{author.name}</p>

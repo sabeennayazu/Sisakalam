@@ -281,12 +281,24 @@ class ChapterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chapter
         fields = ["id", "story", "title", "slug", "chapter_number", "content", "order", "created_at", "updated_at"]
-        read_only_fields = ["id", "story", "chapter_number", "order", "created_at", "updated_at"]
+        read_only_fields = ["id", "story", "slug", "chapter_number", "order", "created_at", "updated_at"]
+
+
+class ChapterSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Chapter
+        fields = ["id", "story", "title", "slug", "chapter_number", "order", "created_at", "updated_at"]
+        read_only_fields = fields
 
 
 class StoryChapterListCreateAPIView(ListCreateAPIView):
     serializer_class = ChapterSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_serializer_class(self):
+        if self.request.method == "GET" and self.request.query_params.get("metadata") == "1":
+            return ChapterSummarySerializer
+        return super().get_serializer_class()
 
     def get_queryset(self):
         story = get_object_or_404(Story, pk=self.kwargs["story_id"])

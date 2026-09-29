@@ -3,7 +3,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from stories.models import Story
+from stories.models import Chapter, Story
 from poems.models import Poem
 from .models import Comment, Like, Bookmark
 from rest_framework import serializers
@@ -57,11 +57,11 @@ def liked_content(request):
 class CommentSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="user.username", read_only=True)
     is_owner = serializers.SerializerMethodField()
-    rating = serializers.IntegerField(min_value=1, max_value=5, required=True)
+    rating = serializers.IntegerField(min_value=1, max_value=5, required=False, allow_null=True)
 
     class Meta:
         model = Comment
-        fields = ["id", "user", "author_name", "is_owner", "story", "poem", "parent", "body", "rating", "created_at", "updated_at"]
+        fields = ["id", "user", "author_name", "is_owner", "story", "chapter", "poem", "parent", "body", "rating", "like_count", "created_at", "updated_at"]
         read_only_fields = ["id", "user", "author_name", "created_at", "updated_at"]
 
     def get_is_owner(self, obj):
@@ -69,27 +69,40 @@ class CommentSerializer(serializers.ModelSerializer):
         return bool(request and request.user.is_authenticated and obj.user_id == request.user.id)
 
     def validate(self, attrs):
-        if bool(attrs.get("story")) == bool(attrs.get("poem")):
-            raise serializers.ValidationError("A comment must target exactly one story or poem.")
+        targets = [attrs.get("story"), attrs.get("chapter"), attrs.get("poem")]
+        if sum(target is not None for target in targets) != 1:
+            raise serializers.ValidationError("A comment must target exactly one story, chapter, or poem.")
+        if (attrs.get("story") or attrs.get("poem")) and not attrs.get("rating"):
+            raise serializers.ValidationError({"rating": "A rating is required for a story or poem review."})
         return attrs
 
 
 @api_view(["GET", "POST"])
 def comments(request):
     story_id = request.query_params.get("story") if request.method == "GET" else request.data.get("story")
+    chapter_id = request.query_params.get("chapter") if request.method == "GET" else request.data.get("chapter")
     poem_id = request.query_params.get("poem") if request.method == "GET" else request.data.get("poem")
-    if not story_id and not poem_id:
-        return Response({"detail": "A story or poem target is required."}, status=status.HTTP_400_BAD_REQUEST)
-    queryset = Comment.objects.filter(story_id=story_id) if story_id else Comment.objects.filter(poem_id=poem_id)
-    queryset = queryset.filter(
-        **({"story__status": "published", "story__is_private": False} if story_id else {"poem__status": "published", "poem__is_private": False})
-    )
+    targets = [target for target in (story_id, chapter_id, poem_id) if target]
+    if len(targets) != 1:
+        return Response({"detail": "Exactly one story, chapter, or poem target is required."}, status=status.HTTP_400_BAD_REQUEST)
+    if story_id:
+        queryset = Comment.objects.filter(story_id=story_id, story__status="published", story__is_private=False)
+    elif chapter_id:
+        queryset = Comment.objects.filter(chapter_id=chapter_id, chapter__story__status="published", chapter__story__is_private=False)
+    else:
+        queryset = Comment.objects.filter(poem_id=poem_id, poem__status="published", poem__is_private=False)
     if request.method == "GET":
-        return Response(CommentSerializer(queryset.select_related("user"), many=True, context={"request": request}).data)
+        sort = request.query_params.get("sort", "most_liked")
+        if sort not in {"most_liked", "newest"}:
+            return Response({"detail": "sort must be most_liked or newest."}, status=status.HTTP_400_BAD_REQUEST)
+        order_by = ["-created_at"] if sort == "newest" else ["-like_count", "-created_at"]
+        return Response(CommentSerializer(queryset.select_related("user").order_by(*order_by), many=True, context={"request": request}).data)
     if not request.user.is_authenticated:
         return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
     if story_id and not Story.objects.filter(pk=story_id, status="published", is_private=False).exists():
         return Response({"detail": "Comments are unavailable for this story."}, status=status.HTTP_404_NOT_FOUND)
+    if chapter_id and not Chapter.objects.filter(pk=chapter_id, story__status="published", story__is_private=False).exists():
+        return Response({"detail": "Comments are unavailable for this chapter."}, status=status.HTTP_404_NOT_FOUND)
     if poem_id and not Poem.objects.filter(pk=poem_id, status="published", is_private=False).exists():
         return Response({"detail": "Comments are unavailable for this poem."}, status=status.HTTP_404_NOT_FOUND)
     serializer = CommentSerializer(data=request.data, context={"request": request})

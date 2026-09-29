@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from stories.models import Story
+from stories.models import Chapter, Story
 from poems.models import Poem
 
 User = get_user_model()
@@ -39,10 +39,12 @@ class Bookmark(models.Model):
 class Comment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
     story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
+    chapter = models.ForeignKey(Chapter, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
     poem = models.ForeignKey(Poem, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='replies', null=True, blank=True)
     body = models.TextField()
     rating = models.PositiveSmallIntegerField(null=True, blank=True)
+    like_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -51,6 +53,17 @@ class Comment(models.Model):
         indexes = [
             models.Index(fields=['story', 'created_at'], name='interactions_story_cmt_idx'),
             models.Index(fields=['poem', 'created_at'], name='interactions_poem_cmt_idx'),
+            models.Index(fields=['chapter', 'created_at'], name='interactions_chapter_cmt_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(story__isnull=False, chapter__isnull=True, poem__isnull=True)
+                    | models.Q(story__isnull=True, chapter__isnull=False, poem__isnull=True)
+                    | models.Q(story__isnull=True, chapter__isnull=True, poem__isnull=False)
+                ),
+                name='comment_exactly_one_target',
+            ),
         ]
 
     def __str__(self):

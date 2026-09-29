@@ -131,7 +131,7 @@ export const getUserStories = async (userId: string | number): Promise<ProfileCo
   return asCollection(response).map((item) => mapContent(item, "story"));
 };
 
-export const getSavedProfileContent = async (): Promise<ProfileContent[]> => {
+export const getBookmarkedProfileContent = async (): Promise<ProfileContent[]> => {
   const response = await getBookmarks();
   return asCollection(response as InteractionContentRecord[]).map(mapInteractionContent);
 };

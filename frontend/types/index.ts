@@ -67,14 +67,17 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
-export interface ChapterApiRecord {
+export interface ChapterReferenceApiRecord {
   id: number;
   story: number;
   title: string;
   slug: string;
   chapter_number: number;
-  content: string;
   order: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface ChapterApiRecord extends ChapterReferenceApiRecord {
+  content: string;
 }
