@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth import get_user_model
 from stories.models import Chapter, Story
 from poems.models import Poem
@@ -8,12 +9,28 @@ User = get_user_model()
 
 class Like(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='likes')
-    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='liked_by', null=True, blank=True)
-    poem = models.ForeignKey(Poem, on_delete=models.CASCADE, related_name='liked_by', null=True, blank=True)
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='likes_received', null=True, blank=True)
+    poem = models.ForeignKey(Poem, on_delete=models.CASCADE, related_name='likes_received', null=True, blank=True)
+    chapter = models.ForeignKey(Chapter, on_delete=models.CASCADE, related_name='likes_received', null=True, blank=True)
+    comment = models.ForeignKey('Comment', on_delete=models.CASCADE, related_name='likes_received', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'story', 'poem')
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(story__isnull=False, poem__isnull=True, chapter__isnull=True, comment__isnull=True)
+                    | Q(story__isnull=True, poem__isnull=False, chapter__isnull=True, comment__isnull=True)
+                    | Q(story__isnull=True, poem__isnull=True, chapter__isnull=False, comment__isnull=True)
+                    | Q(story__isnull=True, poem__isnull=True, chapter__isnull=True, comment__isnull=False)
+                ),
+                name='like_exactly_one_target',
+            ),
+            models.UniqueConstraint(fields=['user', 'story'], condition=Q(story__isnull=False), name='unique_user_story_like'),
+            models.UniqueConstraint(fields=['user', 'poem'], condition=Q(poem__isnull=False), name='unique_user_poem_like'),
+            models.UniqueConstraint(fields=['user', 'chapter'], condition=Q(chapter__isnull=False), name='unique_user_chapter_like'),
+            models.UniqueConstraint(fields=['user', 'comment'], condition=Q(comment__isnull=False), name='unique_user_comment_like'),
+        ]
 
     def __str__(self):
         if self.story:
@@ -28,7 +45,14 @@ class Bookmark(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'story', 'poem')
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(story__isnull=False, poem__isnull=True) | Q(story__isnull=True, poem__isnull=False),
+                name='bookmark_exactly_one_target',
+            ),
+            models.UniqueConstraint(fields=['user', 'story'], condition=Q(story__isnull=False), name='unique_user_story_bookmark'),
+            models.UniqueConstraint(fields=['user', 'poem'], condition=Q(poem__isnull=False), name='unique_user_poem_bookmark'),
+        ]
 
     def __str__(self):
         if self.story:

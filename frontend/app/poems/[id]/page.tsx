@@ -6,6 +6,8 @@ import { getMediaUrl } from "@/utils/api";
 import { getPoem } from "@/utils/poems.api";
 import type { PoemApiRecord } from "@/types";
 import ContentComments from "@/components/Comments/ContentComments";
+import LikeButton from "@/components/interactions/LikeButton";
+import BookmarkButton from "@/components/interactions/BookmarkButton";
 
 interface PoemPageProps { params: Promise<{ id: string }> }
 
@@ -58,7 +60,8 @@ export default function PoemPage({ params }: PoemPageProps) {
               </div>
               <div className="flex flex-wrap items-center gap-4">
                 <button className="rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black transition-colors hover:bg-gray-100">Read Now</button>
-                <button className="rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/5">Add to Library</button>
+                <BookmarkButton targetId={poem.id} targetType="poem" initialBookmarked={poem.is_bookmarked} showLabel className="rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-white/5" />
+                <LikeButton targetId={poem.id} targetType="poem" initialLikes={poem.likes} initialLiked={poem.is_liked} showLabel className="rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-white/5 [&>span]:text-white" />
               </div>
             </div>
           </div>

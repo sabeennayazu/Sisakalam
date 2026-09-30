@@ -32,11 +32,11 @@ export default function ChapterContent({ chapter, highlightTitle = false, onVisi
         <div
           className={`mb-8 ${
             highlightTitle
-              ? 'sticky top-0 z-10 bg-white py-4 shadow-sm'
+              ? 'sticky top-0 z-10 bg-inherit py-4 shadow-sm'
               : ''
           }`}
         >
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-inherit" style={{ color: 'inherit' }}>
             Chapter {chapter.chapter_number}: {chapter.title}
           </h2>
           <p className="mt-2 text-sm text-gray-500">
@@ -49,9 +49,9 @@ export default function ChapterContent({ chapter, highlightTitle = false, onVisi
         </div>
 
         {/* Chapter Content */}
-        <div className="prose prose-lg max-w-none text-gray-800">
+        <div className="prose max-w-none text-inherit" style={{ fontSize: 'var(--reading-font-size)' }}>
           {chapter.content.split('\n\n').map((paragraph, idx) => (
-            <p key={idx} className="mb-6 leading-8">
+            <p key={idx} className="mb-6 leading-8" style={{ color: 'inherit' }}>
               {paragraph}
             </p>
           ))}

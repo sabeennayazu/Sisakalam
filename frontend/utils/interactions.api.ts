@@ -1,5 +1,51 @@
 import { apiFetch } from "./client";
 
+export type LikeTargetType = "story" | "poem" | "chapter" | "comment";
+export type BookmarkTargetType = "story" | "poem";
+
+export interface LikeState {
+  liked: boolean;
+  is_liked: boolean;
+  like_count: number;
+  likes_count: number;
+}
+
+export interface BookmarkState {
+  is_bookmarked: boolean;
+}
+
+export interface InteractionState {
+  isLiked?: boolean;
+  likeCount?: number;
+  isBookmarked?: boolean;
+}
+
+const interactionStateCache = new Map<string, InteractionState>();
+const interactionStateListeners = new Set<(key: string, state: InteractionState) => void>();
+
+const interactionKey = (type: string, id: string | number) => `${type}:${id}`;
+
+export const getCachedInteractionState = (type: string, id: string | number) =>
+  interactionStateCache.get(interactionKey(type, id));
+
+export const updateCachedInteractionState = (type: string, id: string | number, state: InteractionState) => {
+  const key = interactionKey(type, id);
+  const nextState = { ...interactionStateCache.get(key), ...state };
+  interactionStateCache.set(key, nextState);
+  interactionStateListeners.forEach((listener) => listener(key, nextState));
+};
+
+export const subscribeInteractionState = (listener: (key: string, state: InteractionState) => void) => {
+  interactionStateListeners.add(listener);
+  return () => { interactionStateListeners.delete(listener); };
+};
+
+export const toggleLike = async (targetType: LikeTargetType, targetId: string | number) =>
+  apiFetch<LikeState>(`/interactions/likes/${targetType}/${targetId}/`, { method: "POST" });
+
+export const toggleBookmark = async (targetType: BookmarkTargetType, targetId: string | number) =>
+  apiFetch<BookmarkState>(`/interactions/bookmarks/${targetType}/${targetId}/`, { method: "POST" });
+
 /**
  * Likes a story for the authenticated user.
  *
@@ -165,8 +211,7 @@ export const getComments = async (targetType: string, targetId: string | number,
  * @requiresAuthentication true
  */
 export const replyToComment = async (commentId: string | number, payload: Record<string, unknown>) => {
-  // TODO: Backend endpoint pending for comment replies.
-  return apiFetch(`/interactions/comments/${commentId}/reply/`, { method: "POST", body: payload });
+  return apiFetch(`/interactions/comments/`, { method: "POST", body: { ...payload, parent: commentId } });
 };
 
 /**

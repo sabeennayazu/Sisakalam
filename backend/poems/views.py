@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
+from interactions.querysets import annotate_content_interactions
 from stories.models import Genre, Tags
 from .models import Poem, PoemStatus
 
@@ -29,13 +30,17 @@ class PoemSerializer(serializers.ModelSerializer):
     tag_names = serializers.SerializerMethodField(read_only=True)
     author_name = serializers.SerializerMethodField(read_only=True)
     genre_name = serializers.SerializerMethodField(read_only=True)
+    likes = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    is_bookmarked = serializers.SerializerMethodField()
 
     class Meta:
         model = Poem
         fields = [
             "id", "title", "content", "author", "author_name", "genre", "genre_name",
             "tags", "tag_names", "image", "is_mature", "is_private", "status", "published_at",
-            "views", "likes", "comments_count", "favorites_count", "created_at", "updated_at"
+            "views", "likes", "comments_count", "favorites_count", "is_liked", "is_bookmarked", "created_at", "updated_at"
         ]
         read_only_fields = ["id", "author", "author_name", "genre_name", "tag_names", "published_at", "created_at", "updated_at", "views", "likes", "comments_count", "favorites_count"]
 
@@ -47,6 +52,20 @@ class PoemSerializer(serializers.ModelSerializer):
 
     def get_genre_name(self, obj):
         return obj.genre.name if obj.genre else None
+
+    def get_likes(self, obj):
+        count = getattr(obj, "api_likes_count", None)
+        return count if count is not None else obj.likes_received.count()
+
+    def get_comments_count(self, obj):
+        count = getattr(obj, "api_comments_count", None)
+        return count if count is not None else obj.comments.count()
+
+    def get_is_liked(self, obj):
+        return bool(getattr(obj, "api_is_liked", False))
+
+    def get_is_bookmarked(self, obj):
+        return bool(getattr(obj, "api_is_bookmarked", False))
 
     def create(self, validated_data):
         tags_data = validated_data.pop("tags", [])
@@ -86,7 +105,7 @@ class PoemViewSet(viewsets.ModelViewSet):
         return [AllowAny()]
 
     def get_queryset(self):
-        queryset = self.queryset
+        queryset = annotate_content_interactions(self.queryset, "poem", self.request.user)
         if self.action in {"update", "partial_update", "destroy", "publish", "unpublish"}:
             if not self.request.user.is_authenticated:
                 return Poem.objects.none()
@@ -136,7 +155,7 @@ class PoemViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="trending")
     def trending(self, request):
-        queryset = self.get_queryset().order_by("-views", "-likes")[:12]
+        queryset = self.get_queryset().order_by("-views", "-api_likes_count")[:12]
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Book, Settings, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -69,13 +69,19 @@ export default function ReadingLayout({
 
   const handleChapterChange = useCallback((chapterNumber: number) => {
     const chapter = chapterIndex.find((item) => item.chapter_number === chapterNumber);
-    if (chapter) router.replace(`/stories/${storyId}/${chapter.slug}`, { scroll: false });
+    if (chapter) {
+      window.dispatchEvent(new CustomEvent('sisakalam:reader-route-sync', {
+        detail: { storyId, chapterSlug: chapter.slug },
+      }));
+      router.replace(`/stories/${storyId}/${chapter.slug}`, { scroll: false });
+    }
   }, [chapterIndex, router, storyId]);
 
   const {
     chapters,
     currentChapterNumber,
-    isLoading,
+    isLoadingPrevious,
+    isLoadingNext,
     error,
     hasPrevious,
     hasNext,
@@ -84,26 +90,60 @@ export default function ReadingLayout({
     loadMoreChapters,
   } = useContinuousChapters(initialChapters, chapterIndex, initialChapterNumber, fetchChapter, handleChapterChange);
 
-  const { getCSSVars, getBackgroundClass } =
-    useReadingSettings();
+  const readingSettings = useReadingSettings();
+  const { getCSSVars, getBackgroundClass } = readingSettings;
 
   const contentRef = useRef<HTMLDivElement>(null);
+  const savedScrollTopRef = useRef<number | null>(null);
+  const savedScrollHeightRef = useRef<number | null>(null);
+  const isLoadingPreviousRef = useRef(isLoadingPrevious);
+
+  useLayoutEffect(() => {
+    isLoadingPreviousRef.current = isLoadingPrevious;
+  }, [isLoadingPrevious]);
 
   useEffect(() => {
     if (initialChapterNumber === 1) return;
     const frame = window.requestAnimationFrame(() => {
       document.getElementById(`chapter-${initialChapterNumber}`)?.scrollIntoView({ block: 'start' });
+      if (hasPrevious) {
+        savedScrollTopRef.current = window.scrollY;
+        savedScrollHeightRef.current = document.body.scrollHeight;
+        window.requestAnimationFrame(() => {
+          if (isLoadingPreviousRef.current) return;
+          savedScrollTopRef.current = null;
+          savedScrollHeightRef.current = null;
+        });
+      }
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [initialChapterNumber]);
+  }, [hasPrevious, initialChapterNumber]);
+
+  useLayoutEffect(() => {
+    if (savedScrollTopRef.current === null || savedScrollHeightRef.current === null) return;
+    const heightChange = document.body.scrollHeight - savedScrollHeightRef.current;
+    window.scrollTo({ top: savedScrollTopRef.current + heightChange, behavior: 'auto' });
+    savedScrollTopRef.current = window.scrollY;
+    savedScrollHeightRef.current = document.body.scrollHeight;
+  }, [chapters.length]);
+
+  useEffect(() => {
+    if (isLoadingPrevious || savedScrollTopRef.current === null) return;
+    savedScrollTopRef.current = null;
+    savedScrollHeightRef.current = null;
+  }, [isLoadingPrevious]);
 
   const handleNearBottom = useCallback(() => {
-    if (hasNext && !isLoading) void loadMoreChapters('next');
-  }, [hasNext, isLoading, loadMoreChapters]);
+    if (hasNext && !isLoadingNext) void loadMoreChapters('next');
+  }, [hasNext, isLoadingNext, loadMoreChapters]);
 
   const handleNearTop = useCallback(() => {
-    if (hasPrevious && !isLoading) void loadMoreChapters('previous');
-  }, [hasPrevious, isLoading, loadMoreChapters]);
+    if (hasPrevious && !isLoadingPrevious) {
+      savedScrollTopRef.current = window.scrollY;
+      savedScrollHeightRef.current = document.body.scrollHeight;
+      void loadMoreChapters('previous');
+    }
+  }, [hasPrevious, isLoadingPrevious, loadMoreChapters]);
 
   const handleChapterVisible = useCallback((chapterNumber: number) => {
     setCurrentChapter(chapterNumber);
@@ -163,10 +203,11 @@ export default function ReadingLayout({
 
           {/* Reading Observer - Top */}
           {hasPrevious && <ReadingObserver edge="top" onIntersect={handleNearTop} />}
+          {isLoadingPrevious && <ChapterLoader isLoading error={error} onRetry={handleNearTop} />}
 
           {chapters.map((chapter) => <ChapterContent key={chapter.id} chapter={chapter} onVisible={handleChapterVisible} />)}
 
-          <ChapterLoader isLoading={isLoading} error={error} onRetry={handleNearBottom} />
+          <ChapterLoader isLoading={isLoadingNext} error={error} onRetry={handleNearBottom} />
 
           {hasNext && <ReadingObserver edge="bottom" onIntersect={handleNearBottom} />}
 
@@ -252,11 +293,15 @@ export default function ReadingLayout({
       <ReaderSettingsPanel
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
+        settings={readingSettings}
+        updateSettings={readingSettings.updateSettings}
+        resetSettings={readingSettings.resetSettings}
       />
 
       <ChapterCommentsPanel
         chapterId={currentChapter?.id ?? null}
         chapterNumber={currentChapterNumber}
+        chapterTitle={currentChapter?.title}
         isOpen={showComments}
         onClose={() => setShowComments(false)}
       />

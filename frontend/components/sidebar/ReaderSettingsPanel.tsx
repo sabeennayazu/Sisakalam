@@ -6,12 +6,14 @@ import {
   BackgroundColor,
   FontFamily,
   FontSize,
-  useReadingSettings,
 } from '@/hooks/useReadingSettings';
 
 interface ReaderSettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  settings: ReadingSettings;
+  updateSettings: (updates: Partial<ReadingSettings>) => void;
+  resetSettings: () => void;
 }
 
 const BACKGROUND_OPTIONS: { label: string; value: BackgroundColor }[] = [
@@ -37,14 +39,11 @@ const FONT_SIZE_OPTIONS: { label: string; value: FontSize }[] = [
 export default function ReaderSettingsPanel({
   isOpen,
   onClose,
+  settings,
+  updateSettings,
+  resetSettings,
 }: ReaderSettingsPanelProps) {
-  const {
-    backgroundColor,
-    fontFamily,
-    fontSize,
-    updateSettings,
-    resetSettings,
-  } = useReadingSettings();
+  const { backgroundColor, fontFamily, fontSize } = settings;
 
   if (!isOpen) return null;
 

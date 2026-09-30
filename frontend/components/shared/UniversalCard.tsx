@@ -20,6 +20,8 @@ export interface UniversalCardProps {
     views: string | number;
     likes: number;
     comments: string | number;
+    isLiked?: boolean;
+    isBookmarked?: boolean;
     
     // Optional content type indicator
     type?: ContentType;
@@ -60,6 +62,8 @@ export default function UniversalCard({
     views,
     likes,
     comments,
+    isLiked = false,
+    isBookmarked = false,
     type,
     selectionMode = false,
     isSelected = false,
@@ -87,6 +91,8 @@ export default function UniversalCard({
     const formattedViews = typeof views === "number" ? views.toString() : views || "0";
     const formattedComments = typeof comments === "number" ? comments.toString() : comments || "0";
     const isDraft = status === "draft";
+    const likeTargetType = type === "story" || type === "poem" ? type : null;
+    const bookmarkTargetType = type === "story" || type === "poem" ? type : null;
     const savedTime = savedAt ? formatSavedTime(savedAt) : "just now";
     const destination = status === "draft"
         ? "/write"
@@ -180,9 +186,9 @@ export default function UniversalCard({
                             <button type="button" onClick={handlePrivacy} className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100">{isPrivate ? "Public" : "Private"}</button>
                         </div>}
                     </div>
-                ) : showBookmark && !selectionMode && !isDraft && (
+                ) : showBookmark && !selectionMode && !isDraft && bookmarkTargetType && (
                     <div onClick={(event) => event.stopPropagation()} className="absolute top-2 right-2 md:top-3 md:right-3 bg-black/20 rounded-full p-1.5 md:p-2 shadow-md hover:shadow-lg transition">
-                        <BookmarkButton storyId={id} />
+                        <BookmarkButton targetId={id} targetType={bookmarkTargetType} initialBookmarked={isBookmarked} />
                     </div>
                 )}
             </div>
@@ -291,7 +297,7 @@ export default function UniversalCard({
                     </div>
                     <div className="flex items-center gap-3">
                         <div onClick={(event) => event.stopPropagation()}>
-                            <LikeButton storyId={id} initialLikes={likes} />
+                            {likeTargetType && <LikeButton targetId={id} targetType={likeTargetType} initialLikes={likes} initialLiked={isLiked} />}
                         </div>
                         <div onClick={(event) => event.stopPropagation()} className="flex items-center gap-1 hover:text-black transition-colors">
                             <MessageCircle size={14} />

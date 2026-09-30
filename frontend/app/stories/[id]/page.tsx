@@ -7,6 +7,8 @@ import { getMediaUrl } from "@/utils/api";
 import { getStory, getStoryChapters } from "@/utils/stories.api";
 import type { ChapterReferenceApiRecord, StoryApiRecord } from "@/types";
 import ContentComments from "@/components/Comments/ContentComments";
+import LikeButton from "@/components/interactions/LikeButton";
+import BookmarkButton from "@/components/interactions/BookmarkButton";
 
 interface StoryPageProps { params: Promise<{ id: string }> }
 
@@ -22,12 +24,14 @@ export default function StoryPage({ params }: StoryPageProps) {
     let cancelled = false;
     void params.then(async ({ id }) => {
       try {
-        const [storyResponse, chapterResponse] = await Promise.all([
+        const [storyResponse, chapterResponse, currentUser] = await Promise.all([
           getStory<StoryApiRecord>(id),
           getStoryChapters<ChapterReferenceApiRecord[]>(id, true),
+          getCurrentUser().catch(() => null),
         ]);
         if (cancelled) return;
-        if (storyResponse.status !== "published") { setNotFound(true); return; }
+        const isOwner = Boolean(currentUser && currentUser.id === storyResponse.author);
+        if (storyResponse.status !== "published" && !isOwner) { setNotFound(true); return; }
         setStory(storyResponse);
         setChapters(chapterResponse);
       } catch (loadError) {
@@ -51,6 +55,11 @@ export default function StoryPage({ params }: StoryPageProps) {
 
   return (
     <div className="min-h-screen bg-white">
+      {story.status !== "published" && currentUserId === story.author && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
+          This is a draft/private story. Only you can view it right now.
+        </div>
+      )}
       <section className="bg-[#1a1a1a] py-24 text-white">
         <div className="relative z-10 mx-auto max-w-6xl px-8">
           <div className="flex flex-col gap-12 md:flex-row">
@@ -70,8 +79,8 @@ export default function StoryPage({ params }: StoryPageProps) {
               <div className="mb-8 flex flex-wrap gap-8 md:gap-12"><Stat label="Views" value={story.views} /><Stat label="Likes" value={story.likes} /><Stat label="Chapters" value={chapters.length} /></div>
               <div className="flex flex-wrap items-center gap-4">
                 {chapters[0] && <Link href={`/stories/${story.id}/${chapters[0].slug}`} className="rounded-full bg-white px-8 py-3.5 text-sm font-semibold text-black transition-colors hover:bg-gray-100">Read Now</Link>}
-                <button className="rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/5">Add to Bookmark</button>
-                <button className="rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/5">Like</button>
+                <BookmarkButton targetId={story.id} targetType="story" initialBookmarked={story.is_bookmarked} showLabel className="rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-white/5" />
+                <LikeButton targetId={story.id} targetType="story" initialLikes={story.likes} initialLiked={story.is_liked} showLabel className="rounded-full border border-gray-600 px-8 py-3.5 text-sm font-semibold text-white hover:bg-white/5 [&>span]:text-white" />
               </div>
             </div>
           </div>

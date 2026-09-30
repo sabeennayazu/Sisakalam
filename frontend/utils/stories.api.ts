@@ -106,8 +106,21 @@ export const getDrafts = async () => {
  * @returns A list of chapters.
  * @requiresAuthentication false
  */
-export const getStoryChapters = async <T = unknown>(storyId: string | number, metadataOnly = false): Promise<T> => {
-  return apiFetch<T>(`/stories/${storyId}/chapters/`, { query: { metadata: metadataOnly ? 1 : undefined } });
+export const getStoryChapters = async <T = unknown>(
+  storyId: string | number,
+  optionsOrMetadata: boolean | { metadata?: boolean; around?: number; before?: number; after?: number } = false,
+): Promise<T> => {
+  const query: Record<string, string | number | boolean | undefined | null> = {};
+  const metadata = typeof optionsOrMetadata === "object" ? !!optionsOrMetadata.metadata : !!optionsOrMetadata;
+  if (metadata) query.metadata = 1;
+
+  if (typeof optionsOrMetadata === "object" && optionsOrMetadata) {
+    if (typeof optionsOrMetadata.around === "number") query.around = optionsOrMetadata.around;
+    if (typeof optionsOrMetadata.before === "number") query.before = optionsOrMetadata.before;
+    if (typeof optionsOrMetadata.after === "number") query.after = optionsOrMetadata.after;
+  }
+
+  return apiFetch<T>(`/stories/${storyId}/chapters/`, { query });
 };
 
 export const getStoryChapterBySlug = async <T = unknown>(storyId: string | number, slug: string): Promise<T> => {

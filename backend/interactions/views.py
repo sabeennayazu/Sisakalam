@@ -1,3 +1,5 @@
+from django.db import transaction
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q, Subquery
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -8,6 +10,18 @@ from poems.models import Poem
 from .models import Comment, Like, Bookmark
 from rest_framework import serializers
 from .serializers import LikeSerializer, BookmarkSerializer
+from stories.models import StoryStatus
+from poems.models import PoemStatus
+from .querysets import annotate_content_interactions
+
+
+def _content_queryset(model, target_field, user):
+    queryset = model.objects.select_related("author", "genre")
+    queryset = annotate_content_interactions(queryset, target_field, user)
+    if target_field == "story":
+        first_chapter = Chapter.objects.filter(story_id=OuterRef("pk")).order_by("order").values("slug")[:1]
+        queryset = queryset.annotate(api_first_chapter_slug=Subquery(first_chapter))
+    return queryset
 
 
 def _content_payload(content, content_type):
@@ -17,12 +31,14 @@ def _content_payload(content, content_type):
         "title": content.title,
         "author_name": content.author.username if content.author else None,
         "author_id": content.author_id,
-        "chapter_slug": content.chapters.order_by("order").values_list("slug", flat=True).first() if content_type == "story" else None,
+        "chapter_slug": getattr(content, "api_first_chapter_slug", None) if content_type == "story" else None,
         "genre_name": content.genre.name if content.genre else None,
         "image": content.image.url if content.image else None,
         "views": content.views,
-        "likes": content.likes,
-        "comments_count": content.comments_count,
+        "likes": getattr(content, "api_likes_count", 0),
+        "comments_count": getattr(content, "api_comments_count", 0),
+        "is_liked": getattr(content, "api_is_liked", False),
+        "is_bookmarked": getattr(content, "api_is_bookmarked", False),
         "is_mature": content.is_mature,
         "is_private": getattr(content, "is_private", False),
     }
@@ -31,49 +47,83 @@ def _content_payload(content, content_type):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def bookmarked_content(request):
-    bookmarks = Bookmark.objects.filter(user=request.user).select_related(
-        "story__author", "story__genre", "poem__author", "poem__genre"
+    bookmarks = Bookmark.objects.filter(user=request.user, story__isnull=False).prefetch_related(
+        Prefetch("story", queryset=_content_queryset(Story, "story", request.user)),
+    ).order_by("-created_at")
+    poem_bookmarks = Bookmark.objects.filter(user=request.user, poem__isnull=False).prefetch_related(
+        Prefetch("poem", queryset=_content_queryset(Poem, "poem", request.user)),
     ).order_by("-created_at")
     return Response([
-        _content_payload(bookmark.story, "story") if bookmark.story
-        else _content_payload(bookmark.poem, "poem")
-        for bookmark in bookmarks
+        item for _, item in sorted(
+            [(bookmark.created_at, _content_payload(bookmark.story, "story")) for bookmark in bookmarks]
+            + [(bookmark.created_at, _content_payload(bookmark.poem, "poem")) for bookmark in poem_bookmarks],
+            key=lambda pair: pair[0],
+            reverse=True,
+        )
     ])
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def liked_content(request):
-    likes = Like.objects.filter(user=request.user).select_related(
-        "story__author", "story__genre", "poem__author", "poem__genre"
-    ).order_by("-created_at")
-    return Response([
-        _content_payload(like.story, "story") if like.story
-        else _content_payload(like.poem, "poem")
-        for like in likes
-    ])
+    story_likes = Like.objects.filter(user=request.user, story__isnull=False).prefetch_related(
+        Prefetch("story", queryset=_content_queryset(Story, "story", request.user)),
+    )
+    poem_likes = Like.objects.filter(user=request.user, poem__isnull=False).prefetch_related(
+        Prefetch("poem", queryset=_content_queryset(Poem, "poem", request.user)),
+    )
+    payloads = [
+        (like.created_at, _content_payload(like.story, "story")) for like in story_likes
+    ] + [
+        (like.created_at, _content_payload(like.poem, "poem")) for like in poem_likes
+    ]
+    return Response([item for _, item in sorted(payloads, key=lambda pair: pair[0], reverse=True)])
 
 
 class CommentSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="user.username", read_only=True)
     is_owner = serializers.SerializerMethodField()
+    like_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
     rating = serializers.IntegerField(min_value=1, max_value=5, required=False, allow_null=True)
 
     class Meta:
         model = Comment
-        fields = ["id", "user", "author_name", "is_owner", "story", "chapter", "poem", "parent", "body", "rating", "like_count", "created_at", "updated_at"]
+        fields = ["id", "user", "author_name", "is_owner", "story", "chapter", "poem", "parent", "body", "rating", "like_count", "is_liked", "created_at", "updated_at"]
         read_only_fields = ["id", "user", "author_name", "created_at", "updated_at"]
 
     def get_is_owner(self, obj):
         request = self.context.get("request")
         return bool(request and request.user.is_authenticated and obj.user_id == request.user.id)
 
+    def get_like_count(self, obj):
+        count = getattr(obj, "api_like_count", None)
+        return count if count is not None else obj.likes_received.count()
+
+    def get_is_liked(self, obj):
+        return bool(getattr(obj, "api_is_liked", False))
+
     def validate(self, attrs):
         targets = [attrs.get("story"), attrs.get("chapter"), attrs.get("poem")]
         if sum(target is not None for target in targets) != 1:
             raise serializers.ValidationError("A comment must target exactly one story, chapter, or poem.")
-        if (attrs.get("story") or attrs.get("poem")) and not attrs.get("rating"):
+
+        parent = attrs.get("parent")
+        if parent is None and (attrs.get("story") or attrs.get("poem")) and not attrs.get("rating"):
             raise serializers.ValidationError({"rating": "A rating is required for a story or poem review."})
+
+        if parent is not None:
+            parent_targets = [parent.story, parent.chapter, parent.poem]
+            if sum(target is not None for target in parent_targets) != 1:
+                raise serializers.ValidationError("The parent comment must also belong to exactly one content target.")
+
+            parent_target = next((target for target in (parent.story, parent.chapter, parent.poem) if target is not None), None)
+            current_target = next((target for target in (attrs.get("story"), attrs.get("chapter"), attrs.get("poem")) if target is not None), None)
+            if parent_target is None or current_target is None:
+                raise serializers.ValidationError("A reply must target the same content as its parent comment.")
+            if parent_target != current_target:
+                raise serializers.ValidationError("A reply cannot belong to a different story, chapter, or poem than its parent comment.")
+
         return attrs
 
 
@@ -92,10 +142,19 @@ def comments(request):
     else:
         queryset = Comment.objects.filter(poem_id=poem_id, poem__status="published", poem__is_private=False)
     if request.method == "GET":
-        sort = request.query_params.get("sort", "most_liked")
+        sort = request.query_params.get("sort") or request.query_params.get("ordering") or "most_liked"
         if sort not in {"most_liked", "newest"}:
             return Response({"detail": "sort must be most_liked or newest."}, status=status.HTTP_400_BAD_REQUEST)
-        order_by = ["-created_at"] if sort == "newest" else ["-like_count", "-created_at"]
+        viewer_likes = Like.objects.filter(comment_id=OuterRef("pk"))
+        if request.user.is_authenticated:
+            viewer_likes = viewer_likes.filter(user_id=request.user.id)
+        else:
+            viewer_likes = Like.objects.none()
+        queryset = queryset.annotate(
+            api_like_count=Count("likes_received", distinct=True),
+            api_is_liked=Exists(viewer_likes),
+        )
+        order_by = ["-created_at"] if sort == "newest" else ["-api_like_count", "-created_at"]
         return Response(CommentSerializer(queryset.select_related("user").order_by(*order_by), many=True, context={"request": request}).data)
     if not request.user.is_authenticated:
         return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
@@ -120,76 +179,96 @@ def delete_comment(request, comment_id):
 
 
 class LikeViewSet(viewsets.ViewSet):
-    """
-    ViewSet for managing likes on stories.
-    """
     permission_classes = [IsAuthenticated]
+
+    def _story(self, pk):
+        return get_object_or_404(Story, pk=pk)
 
     @action(detail=True, methods=['post'], url_path='like')
     def like_story(self, request, pk=None):
-        """Like a story"""
-        story = get_object_or_404(Story, pk=pk)
-        like, created = Like.objects.get_or_create(user=request.user, story=story)
-
-        if not created:
-            return Response(
-                {"detail": "You have already liked this story"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Update story likes count
-        story.likes += 1
-        story.save()
-
-        return Response(
-            {
-                "detail": "Story liked successfully",
-                "is_liked": True,
-                "likes_count": story.likes
-            },
-            status=status.HTTP_201_CREATED
-        )
+        return _set_like(request.user, "story", pk, True)
 
     @action(detail=True, methods=['post'], url_path='unlike')
     def unlike_story(self, request, pk=None):
-        """Unlike a story"""
-        story = get_object_or_404(Story, pk=pk)
-        like = Like.objects.filter(user=request.user, story=story)
-
-        if not like.exists():
-            return Response(
-                {"detail": "You have not liked this story"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        like.delete()
-
-        # Update story likes count
-        story.likes -= 1
-        story.save()
-
-        return Response(
-            {
-                "detail": "Story unliked successfully",
-                "is_liked": False,
-                "likes_count": story.likes
-            },
-            status=status.HTTP_200_OK
-        )
+        return _set_like(request.user, "story", pk, False)
 
     @action(detail=True, methods=['get'], url_path='is-liked')
     def is_liked(self, request, pk=None):
-        """Check if the current user has liked this story"""
-        story = get_object_or_404(Story, pk=pk)
+        story = self._story(pk)
         is_liked = Like.objects.filter(user=request.user, story=story).exists()
+        count = Like.objects.filter(story=story).count()
+        return Response({"is_liked": is_liked, "liked": is_liked, "like_count": count, "likes_count": count})
 
-        return Response(
-            {
-                "is_liked": is_liked,
-                "likes_count": story.likes
-            },
-            status=status.HTTP_200_OK
+
+def _target_queryset(target_type):
+    if target_type == "story":
+        return Story.objects.filter(status=StoryStatus.PUBLISHED, is_private=False), "story"
+    if target_type == "poem":
+        return Poem.objects.filter(status=PoemStatus.PUBLISHED, is_private=False), "poem"
+    if target_type == "chapter":
+        return Chapter.objects.filter(story__status=StoryStatus.PUBLISHED, story__is_private=False), "chapter"
+    if target_type in {"comment", "reply"}:
+        visible_comments = Comment.objects.filter(
+            Q(story__status=StoryStatus.PUBLISHED, story__is_private=False)
+            | Q(poem__status=PoemStatus.PUBLISHED, poem__is_private=False)
+            | Q(chapter__story__status=StoryStatus.PUBLISHED, chapter__story__is_private=False)
         )
+        return visible_comments, "comment"
+    return None, None
+
+
+def _set_like(user, target_type, target_id, liked):
+    queryset, target_field = _target_queryset(target_type)
+    if queryset is None:
+        return Response({"detail": "Unsupported like target."}, status=status.HTTP_400_BAD_REQUEST)
+    with transaction.atomic():
+        target = get_object_or_404(queryset.select_for_update(of=("self",)), pk=target_id)
+        target_filter = {target_field: target}
+        existing = Like.objects.filter(user=user, **target_filter)
+        if liked:
+            existing.get_or_create(user=user, **target_filter)
+        else:
+            existing.delete()
+        like_count = Like.objects.filter(**target_filter).count()
+        is_liked = existing.exists()
+    return Response({"liked": is_liked, "is_liked": is_liked, "like_count": like_count, "likes_count": like_count})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def toggle_like(request, target_type, target_id):
+    queryset, target_field = _target_queryset(target_type)
+    if queryset is None:
+        return Response({"detail": "Unsupported like target."}, status=status.HTTP_400_BAD_REQUEST)
+    with transaction.atomic():
+        target = get_object_or_404(queryset.select_for_update(of=("self",)), pk=target_id)
+        target_filter = {target_field: target}
+        existing = Like.objects.filter(user=request.user, **target_filter)
+        if existing.exists():
+            existing.delete()
+        else:
+            Like.objects.get_or_create(user=request.user, **target_filter)
+        liked = Like.objects.filter(user=request.user, **target_filter).exists()
+        like_count = Like.objects.filter(**target_filter).count()
+    return Response({"liked": liked, "is_liked": liked, "like_count": like_count, "likes_count": like_count})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def toggle_bookmark(request, target_type, target_id):
+    queryset, target_field = _target_queryset(target_type)
+    if target_type not in {"story", "poem"} or queryset is None:
+        return Response({"detail": "Only stories and poems can be bookmarked."}, status=status.HTTP_400_BAD_REQUEST)
+    with transaction.atomic():
+        target = get_object_or_404(queryset.select_for_update(of=("self",)), pk=target_id)
+        target_filter = {target_field: target}
+        existing = Bookmark.objects.filter(user=request.user, **target_filter)
+        if existing.exists():
+            existing.delete()
+        else:
+            Bookmark.objects.get_or_create(user=request.user, **target_filter)
+        bookmarked = Bookmark.objects.filter(user=request.user, **target_filter).exists()
+    return Response({"is_bookmarked": bookmarked})
 
 
 class BookmarkViewSet(viewsets.ViewSet):

@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import LikeViewSet, BookmarkViewSet, comments, delete_comment, liked_content, bookmarked_content
+from .views import LikeViewSet, BookmarkViewSet, comments, delete_comment, liked_content, bookmarked_content, toggle_bookmark, toggle_like
 
 router = DefaultRouter()
 
@@ -9,6 +9,8 @@ urlpatterns = [
     path('bookmarks/', bookmarked_content, name='bookmarked-content'),
     path('comments/', comments, name='comments'),
     path('comments/<int:comment_id>/', delete_comment, name='delete-comment'),
+    path('likes/<str:target_type>/<int:target_id>/', toggle_like, name='toggle-like'),
+    path('bookmarks/<str:target_type>/<int:target_id>/', toggle_bookmark, name='toggle-bookmark'),
     path('stories/<int:pk>/like/', LikeViewSet.as_view({'post': 'like_story'}), name='like-story'),
     path('stories/<int:pk>/unlike/', LikeViewSet.as_view({'post': 'unlike_story'}), name='unlike-story'),
     path('stories/<int:pk>/is-liked/', LikeViewSet.as_view({'get': 'is_liked'}), name='is-liked'),

@@ -8,6 +8,52 @@ class StoriesEndpointTests(APITestCase):
         response = self.client.get(reverse("story-list"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_story_owner_can_access_own_draft_or_private_story(self):
+        from django.contrib.auth import get_user_model
+        from stories.models import Genre, Story
+
+        user = get_user_model().objects.create_user(
+            username="draftviewer",
+            email="draftviewer@example.com",
+            password="strongpass123",
+        )
+        genre = Genre.objects.create(name="Fantasy", type="story")
+        story = Story.objects.create(
+            title="Private Draft",
+            synopsis="This should be viewable by its author.",
+            author=user,
+            genre=genre,
+            status="draft",
+            is_private=True,
+        )
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get(reverse("story-detail", kwargs={"pk": story.pk}))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], story.id)
+        self.assertEqual(response.data["status"], "draft")
+
+    def test_only_owner_can_read_chapter_of_private_draft(self):
+        from django.contrib.auth import get_user_model
+        from stories.models import Chapter, Genre, Story
+
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="chapterowner", email="chapterowner@example.com", password="strongpass123")
+        other = user_model.objects.create_user(username="chapterother", email="chapterother@example.com", password="strongpass123")
+        genre = Genre.objects.create(name="Private Fiction", type="story")
+        story = Story.objects.create(title="Private", synopsis="Draft", author=owner, genre=genre, status="draft", is_private=True)
+        chapter = Chapter.objects.create(story=story, title="Opening", chapter_number=1, order=1, content="Private chapter body")
+
+        self.client.force_authenticate(user=other)
+        denied = self.client.get(reverse("story-chapter-by-slug", kwargs={"story_id": story.id, "slug": chapter.slug}))
+        self.assertEqual(denied.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.client.force_authenticate(user=owner)
+        allowed = self.client.get(reverse("story-chapter-by-slug", kwargs={"story_id": story.id, "slug": chapter.slug}))
+        self.assertEqual(allowed.status_code, status.HTTP_200_OK)
+        self.assertEqual(allowed.data["content"], "Private chapter body")
+
     def test_authenticated_user_can_publish_a_story(self):
         from django.contrib.auth import get_user_model
         from stories.models import Genre

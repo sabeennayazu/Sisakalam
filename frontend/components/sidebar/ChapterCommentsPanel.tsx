@@ -6,6 +6,7 @@ import ContentComments from '@/components/Comments/ContentComments';
 interface ChapterCommentsPanelProps {
   chapterId: number | null;
   chapterNumber: number;
+  chapterTitle?: string;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -13,6 +14,7 @@ interface ChapterCommentsPanelProps {
 export default function ChapterCommentsPanel({
   chapterId,
   chapterNumber,
+  chapterTitle,
   isOpen,
   onClose,
 }: ChapterCommentsPanelProps) {
@@ -34,14 +36,14 @@ export default function ChapterCommentsPanel({
             <div>
               <h2 className="text-lg font-bold text-gray-900">Comments</h2>
               <p className="text-xs text-gray-500">
-                Chapter {chapterNumber}
+                Chapter {chapterNumber}{chapterTitle ? ` — ${chapterTitle}` : ""}
               </p>
             </div>
           </div>
         </div>
 
         <div className="p-4">
-          {chapterId === null ? <p className="py-8 text-center text-sm text-gray-500">Chapter comments are unavailable.</p> : <ContentComments type="chapter" contentId={chapterId} />}
+          {chapterId === null ? <p className="py-8 text-center text-sm text-gray-500">Chapter comments are unavailable.</p> : <ContentComments type="chapter" contentId={chapterId} chapterNumber={chapterNumber} chapterTitle={chapterTitle} />}
         </div>
       </div>
     </div>

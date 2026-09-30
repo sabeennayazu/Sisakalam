@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link"; // This line is retained for context
+import { use, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import ReadingLayout from "@/components/reading/ReadingLayout";
 import { ChapterData, ChapterReference } from "@/hooks/useContinuousChapters";
+import { getCurrentUser } from "@/utils/account.api";
 import { getMediaUrl } from "@/utils/api";
 import { getStory, getStoryChapterBySlug, getStoryChapters } from "@/utils/stories.api";
 import type { ChapterApiRecord, ChapterReferenceApiRecord, StoryApiRecord } from "@/types";
@@ -22,21 +23,69 @@ export default function ChapterReadingPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState(false);
-  const loadedStoryId = useRef<string | null>(null);
+  const readerDataRef = useRef<ReaderData | null>(readerData);
+  const internalRouteKeyRef = useRef<string | null>(null);
+  readerDataRef.current = readerData;
+  const { id, chapterSlug } = use(params);
+
+  useEffect(() => {
+    const markReaderRouteSync = (event: Event) => {
+      const detail = (event as CustomEvent<{ storyId: string; chapterSlug: string }>).detail;
+      internalRouteKeyRef.current = `${detail.storyId}:${detail.chapterSlug}`;
+    };
+    window.addEventListener("sisakalam:reader-route-sync", markReaderRouteSync);
+    return () => window.removeEventListener("sisakalam:reader-route-sync", markReaderRouteSync);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    void params.then(async ({ id, chapterSlug }) => {
-      if (loadedStoryId.current === id) return;
-      loadedStoryId.current = id;
-      try {
-        const [story, chapterReferences] = await Promise.all([
-          getStory<StoryApiRecord>(id),
-          getStoryChapters<ChapterReferenceApiRecord[]>(id, true),
-        ]);
+    const routeKey = `${id}:${chapterSlug}`;
+    const isReaderRouteSync = internalRouteKeyRef.current === routeKey;
+    internalRouteKeyRef.current = null;
+    if (isReaderRouteSync) return () => { cancelled = true; };
+
+    const existingReader = readerDataRef.current;
+    const sameStory = existingReader && String(existingReader.story.id) === id;
+
+    setNotFound(false);
+    setError(false);
+    if (sameStory) {
+      const referenceExists = existingReader.chapterIndex.some((chapter) => chapter.slug === chapterSlug);
+      if (!referenceExists) {
+        setNotFound(true);
+        return () => { cancelled = true; };
+      }
+      setLoading(false);
+      void getStoryChapterBySlug<ChapterApiRecord>(id, chapterSlug).then((selectedChapter) => {
         if (cancelled) return;
-        if (story.status !== "published") { setNotFound(true); return; }
-        const chapterIndex: ChapterReference[] = chapterReferences.map(({ id: chapterId, slug, title, chapter_number, created_at }) => ({
+        setReaderData((current) => current && String(current.story.id) === id
+          ? { ...current, initialChapters: [toChapterData(selectedChapter)], initialChapterNumber: selectedChapter.chapter_number }
+          : current);
+      }).catch((loadError: unknown) => {
+        if (cancelled) return;
+        if (loadError instanceof Error && "status" in loadError && (loadError as { status?: number }).status === 404) setNotFound(true);
+        else setError(true);
+      });
+      return () => { cancelled = true; };
+    }
+
+    setReaderData(null);
+    setLoading(true);
+    void (async () => {
+      try {
+        const [story, chapterReferences, currentUser] = await Promise.all([
+          getStory<StoryApiRecord>(id),
+          getStoryChapters<ChapterReferenceApiRecord[]>(id, { metadata: true }),
+          getCurrentUser().catch(() => null),
+        ]);
+        const isOwner = Boolean(currentUser && currentUser.id === story.author);
+        if (story.status !== "published" && !isOwner) { setNotFound(true); return; }
+
+        const rawChapterReferences = (chapterReferences ?? []) as unknown;
+        const chapterList = Array.isArray(rawChapterReferences)
+          ? rawChapterReferences as ChapterReferenceApiRecord[]
+          : ((rawChapterReferences as { chapters?: ChapterReferenceApiRecord[] })?.chapters ?? []);
+        const chapterIndex: ChapterReference[] = chapterList.map(({ id: chapterId, slug, title, chapter_number, created_at }) => ({
           id: chapterId,
           slug,
           title,
@@ -47,28 +96,19 @@ export default function ChapterReadingPage({ params }: PageProps) {
         if (selectedIndex < 0) { setNotFound(true); return; }
 
         const selectedChapter = await getStoryChapterBySlug<ChapterApiRecord>(id, chapterSlug);
-        const firstIndex = Math.max(0, selectedIndex - 1);
-        const lastIndex = Math.min(chapterIndex.length, selectedIndex + 2);
-        const initialReferences = chapterIndex.slice(firstIndex, lastIndex);
-        const initialChapters = await Promise.all(initialReferences.map(async (reference) => {
-          const chapter = reference.slug === selectedChapter.slug
-            ? selectedChapter
-            : await getStoryChapterBySlug<ChapterApiRecord>(id, reference.slug);
-          return toChapterData(chapter);
-        }));
         if (cancelled) return;
-        setReaderData({ story, chapterIndex, initialChapters, initialChapterNumber: selectedChapter.chapter_number });
+        setReaderData({ story, chapterIndex, initialChapters: [toChapterData(selectedChapter)], initialChapterNumber: selectedChapter.chapter_number });
       } catch (loadError) {
         if (cancelled) return;
         if (loadError instanceof Error && "status" in loadError && (loadError as { status?: number }).status === 404) setNotFound(true);
         else setError(true);
-        loadedStoryId.current = null;
       } finally {
         if (!cancelled) setLoading(false);
       }
-    });
+    })();
+
     return () => { cancelled = true; };
-  }, [params]);
+  }, [id, chapterSlug]);
 
   if (loading) return <StateMessage message="Loading chapter..." />;
   if (error) return <StateMessage message="Unable to load this chapter. Please try again." link={readerData ? `/stories/${readerData.story.id}` : "/stories"} linkLabel="Back to Story" />;

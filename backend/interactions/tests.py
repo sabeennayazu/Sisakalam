@@ -95,9 +95,17 @@ class InteractionContentListTests(APITestCase):
 		self.assertEqual(created.data["like_count"], 0)
 
 		base_time = timezone.now() - timedelta(days=1)
-		older = Comment.objects.create(user=self.user, chapter=chapter, body="Older tie", like_count=2)
-		newer = Comment.objects.create(user=self.user, chapter=chapter, body="Newer tie", like_count=2)
-		most_liked = Comment.objects.create(user=self.user, chapter=chapter, body="Most liked", like_count=5)
+		older = Comment.objects.create(user=self.user, chapter=chapter, body="Older tie")
+		newer = Comment.objects.create(user=self.user, chapter=chapter, body="Newer tie")
+		most_liked = Comment.objects.create(user=self.user, chapter=chapter, body="Most liked")
+		for comment, like_total in ((older, 2), (newer, 2), (most_liked, 5)):
+			for index in range(like_total):
+				liker = get_user_model().objects.create_user(
+					username=f"liker-{comment.id}-{index}",
+					email=f"liker-{comment.id}-{index}@example.com",
+					password="strongpass123",
+				)
+				Like.objects.create(user=liker, comment=comment)
 		Comment.objects.filter(pk=older.pk).update(created_at=base_time)
 		Comment.objects.filter(pk=newer.pk).update(created_at=base_time + timedelta(seconds=1))
 		Comment.objects.filter(pk=most_liked.pk).update(created_at=base_time + timedelta(seconds=2))
@@ -132,3 +140,84 @@ class InteractionContentListTests(APITestCase):
 		)
 		self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 		self.assertFalse(Comment.objects.filter(chapter=chapter).exists())
+
+	def test_replies_must_match_the_same_content_target(self):
+		chapter_one = Chapter.objects.create(
+			story=self.story,
+			title="Chapter One",
+			chapter_number=1,
+			order=1,
+			content="Chapter one content",
+		)
+		chapter_two = Chapter.objects.create(
+			story=self.story,
+			title="Chapter Two",
+			chapter_number=2,
+			order=2,
+			content="Chapter two content",
+		)
+		parent = Comment.objects.create(user=self.user, chapter=chapter_one, body="First comment")
+
+		response = self.client.post(
+			reverse("comments"),
+			{"chapter": chapter_two.id, "body": "Wrong chapter reply", "parent": parent.id},
+			format="json",
+		)
+		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+		self.assertFalse(Comment.objects.filter(chapter=chapter_two, parent=parent).exists())
+
+	def test_reply_to_story_review_does_not_require_a_second_rating(self):
+		parent = Comment.objects.create(user=self.user, story=self.story, body="A review", rating=5)
+		response = self.client.post(
+			reverse("comments"),
+			{"story": self.story.id, "parent": parent.id, "body": "A reply"},
+			format="json",
+		)
+		self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+		self.assertEqual(response.data["parent"], parent.id)
+		self.assertIsNone(response.data["rating"])
+
+	def test_like_toggle_persists_and_comment_reads_return_real_state(self):
+		parent = Comment.objects.create(user=self.user, story=self.story, body="A review", rating=5)
+
+		for target_type, target_id in (("story", self.story.id), ("poem", self.poem.id), ("comment", parent.id)):
+			url = reverse("toggle-like", kwargs={"target_type": target_type, "target_id": target_id})
+			liked = self.client.post(url)
+			self.assertEqual(liked.status_code, status.HTTP_200_OK)
+			self.assertTrue(liked.data["is_liked"])
+			self.assertEqual(liked.data["like_count"], 1)
+
+			unliked = self.client.post(url)
+			self.assertEqual(unliked.status_code, status.HTTP_200_OK)
+			self.assertFalse(unliked.data["is_liked"])
+			self.assertEqual(unliked.data["like_count"], 0)
+
+		self.client.post(reverse("toggle-like", kwargs={"target_type": "comment", "target_id": parent.id}))
+		comments = self.client.get(reverse("comments"), {"story": self.story.id})
+		self.assertEqual(comments.status_code, status.HTTP_200_OK)
+		self.assertEqual(comments.data[0]["like_count"], 1)
+		self.assertTrue(comments.data[0]["is_liked"])
+
+	def test_like_toggle_requires_authentication(self):
+		self.client.force_authenticate(user=None)
+		response = self.client.post(reverse("toggle-like", kwargs={"target_type": "story", "target_id": self.story.id}))
+		self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+	def test_reply_to_a_chapter_comment_is_saved_as_a_reply(self):
+		chapter = Chapter.objects.create(
+			story=self.story,
+			title="Chapter One",
+			chapter_number=1,
+			order=1,
+			content="Chapter one content",
+		)
+		parent = Comment.objects.create(user=self.user, chapter=chapter, body="Original comment")
+
+		response = self.client.post(
+			reverse("comments"),
+			{"chapter": chapter.id, "body": "Reply body", "parent": parent.id},
+			format="json",
+		)
+		self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+		self.assertEqual(response.data["parent"], parent.id)
+		self.assertTrue(Comment.objects.filter(parent=parent, chapter=chapter, body="Reply body").exists())

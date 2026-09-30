@@ -10,6 +10,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from library.models import ReadingHistory
+from interactions.querysets import annotate_content_interactions
 from .models import Chapter, Genre, Story, StoryStatus, Tags
 from .serializers import GenreSerializer
 
@@ -36,6 +37,10 @@ class StorySerializer(serializers.ModelSerializer):
     chapter_count = serializers.SerializerMethodField(read_only=True)
     content = serializers.CharField(write_only=True, required=False, allow_blank=True)
     first_chapter_slug = serializers.SerializerMethodField(read_only=True)
+    likes = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    is_bookmarked = serializers.SerializerMethodField()
 
     class Meta:
         model = Story
@@ -43,7 +48,7 @@ class StorySerializer(serializers.ModelSerializer):
             "id", "title", "synopsis", "author", "author_name", "genre", "genre_name",
             "tags", "tag_names", "image", "is_mature", "is_private", "status", "published_at",
             "content", "first_chapter_slug",
-            "chapter_count", "views", "likes", "comments_count", "favorites_count",
+            "chapter_count", "views", "likes", "comments_count", "favorites_count", "is_liked", "is_bookmarked",
             "created_at", "updated_at"
         ]
         read_only_fields = ["id", "author", "author_name", "genre_name", "tag_names", "published_at", "created_at", "updated_at", "views", "likes", "comments_count", "favorites_count"]
@@ -63,6 +68,20 @@ class StorySerializer(serializers.ModelSerializer):
     def get_first_chapter_slug(self, obj):
         chapter = obj.chapters.order_by("order").first()
         return chapter.slug if chapter else None
+
+    def get_likes(self, obj):
+        count = getattr(obj, "api_likes_count", None)
+        return count if count is not None else obj.likes_received.count()
+
+    def get_comments_count(self, obj):
+        count = getattr(obj, "api_comments_count", None)
+        return count if count is not None else obj.comments.count()
+
+    def get_is_liked(self, obj):
+        return bool(getattr(obj, "api_is_liked", False))
+
+    def get_is_bookmarked(self, obj):
+        return bool(getattr(obj, "api_is_bookmarked", False))
 
     def create(self, validated_data):
         tags_data = validated_data.pop("tags", [])
@@ -146,7 +165,7 @@ class StoryViewSet(viewsets.ModelViewSet):
         return [AllowAny()]
 
     def get_queryset(self):
-        queryset = self.queryset
+        queryset = annotate_content_interactions(self.queryset, "story", self.request.user)
         if self.action in {"update", "partial_update", "destroy", "publish", "unpublish"}:
             if not self.request.user.is_authenticated:
                 return Story.objects.none()
@@ -185,7 +204,13 @@ class StoryViewSet(viewsets.ModelViewSet):
         return queryset.order_by("-published_at" if self.request.query_params.get("sort") == "latest" else "-created_at")
 
     def get_object(self):
-        obj = get_object_or_404(self.get_queryset(), pk=self.kwargs["pk"])
+        queryset = annotate_content_interactions(self.queryset, "story", self.request.user)
+        if self.request.user.is_authenticated:
+            queryset = queryset.filter(Q(status=StoryStatus.PUBLISHED, is_private=False) | Q(author=self.request.user))
+        else:
+            queryset = queryset.filter(status=StoryStatus.PUBLISHED, is_private=False)
+
+        obj = get_object_or_404(queryset, pk=self.kwargs["pk"])
         if obj.status != StoryStatus.PUBLISHED and (not self.request.user.is_authenticated or obj.author_id != self.request.user.id):
             raise Http404
         self.check_object_permissions(self.request, obj)
@@ -203,7 +228,7 @@ class StoryViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="trending")
     def trending(self, request):
-        queryset = self.get_queryset().order_by("-views", "-likes")[:12]
+        queryset = self.get_queryset().order_by("-views", "-api_likes_count")[:12]
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -215,13 +240,13 @@ class StoryViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="popular")
     def popular(self, request):
-        queryset = self.get_queryset().order_by("-likes", "-views")[:12]
+        queryset = self.get_queryset().order_by("-api_likes_count", "-views")[:12]
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="featured")
     def featured(self, request):
-        queryset = self.get_queryset().order_by("-likes")[:8]
+        queryset = self.get_queryset().order_by("-api_likes_count")[:8]
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -274,7 +299,8 @@ class AuthorStoryListView(ListAPIView):
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-        return Story.objects.filter(author_id=self.kwargs["author_id"], status=StoryStatus.PUBLISHED, is_private=False).select_related("author", "genre").prefetch_related("tags").order_by("-created_at")
+        queryset = Story.objects.filter(author_id=self.kwargs["author_id"], status=StoryStatus.PUBLISHED, is_private=False).select_related("author", "genre").prefetch_related("tags")
+        return annotate_content_interactions(queryset, "story", self.request.user).order_by("-created_at")
 
 
 class ChapterSerializer(serializers.ModelSerializer):
@@ -304,7 +330,32 @@ class StoryChapterListCreateAPIView(ListCreateAPIView):
         story = get_object_or_404(Story, pk=self.kwargs["story_id"])
         if (story.status != StoryStatus.PUBLISHED or story.is_private) and (not self.request.user.is_authenticated or story.author_id != self.request.user.id):
             raise Http404
-        return story.chapters.all()
+        return story.chapters.all().order_by("chapter_number")
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        if request.query_params.get("around") is not None:
+            try:
+                around = int(request.query_params["around"])
+            except ValueError:
+                return Response({"detail": "around must be an integer chapter number."}, status=status.HTTP_400_BAD_REQUEST)
+            before = max(0, int(request.query_params.get("before") or 5))
+            after = max(0, int(request.query_params.get("after") or 5))
+            max_number = queryset.count() and queryset.order_by("-chapter_number").first().chapter_number or 0
+            window_start = max(1, around - before)
+            window_end = min(max_number, around + after)
+            filtered_queryset = queryset.filter(chapter_number__gte=window_start, chapter_number__lte=window_end)
+            serializer = self.get_serializer(filtered_queryset, many=True)
+            current = queryset.filter(chapter_number=around).first()
+            return Response({
+                "total_chapters": queryset.count(),
+                "current_chapter_number": around,
+                "current_chapter": self.get_serializer(current).data if current else None,
+                "has_previous": around > 1,
+                "has_next": around < max_number,
+                "chapters": serializer.data,
+            })
+        return super().list(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         with transaction.atomic():
@@ -347,7 +398,9 @@ class StoryChapterBySlugAPIView(RetrieveAPIView):
 
     def get_queryset(self):
         story = get_object_or_404(Story, pk=self.kwargs["story_id"])
-        if story.status != StoryStatus.PUBLISHED or story.is_private:
+        if (story.status != StoryStatus.PUBLISHED or story.is_private) and (
+            not self.request.user.is_authenticated or story.author_id != self.request.user.id
+        ):
             raise Http404
         return story.chapters.all()
 

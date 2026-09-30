@@ -11,10 +11,14 @@ interface Review {
 
 interface PoemReviewsSectionProps {
   totalReviews: number;
+  averageRating?: number;
+  reviewType?: "poem" | "story";
 }
 
 export default function PoemReviewsSection({
   totalReviews,
+  averageRating,
+  reviewType,
 }: PoemReviewsSectionProps) {
   const [comment, setComment] = useState("");
 

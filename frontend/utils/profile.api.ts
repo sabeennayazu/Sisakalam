@@ -19,6 +19,8 @@ export interface ProfileContent {
   views: number;
   likes: number;
   comments: number;
+  isLiked: boolean;
+  isBookmarked: boolean;
   isMature: boolean;
   isPrivate: boolean;
 }
@@ -39,6 +41,8 @@ interface ContentRecord {
   views: number;
   likes: number;
   comments_count: number;
+  is_liked: boolean;
+  is_bookmarked: boolean;
   is_mature: boolean;
   is_private?: boolean;
 }
@@ -55,6 +59,8 @@ interface InteractionContentRecord {
   views: number;
   likes: number;
   comments_count: number;
+  is_liked: boolean;
+  is_bookmarked: boolean;
   is_mature: boolean;
   is_private?: boolean;
 }
@@ -91,6 +97,8 @@ const mapContent = (item: ContentRecord, type: ProfileContentType): ProfileConte
   views: item.views,
   likes: item.likes,
   comments: item.comments_count,
+  isLiked: item.is_liked,
+  isBookmarked: item.is_bookmarked,
   isMature: item.is_mature,
   isPrivate: item.is_private ?? false,
 });
@@ -107,6 +115,8 @@ const mapInteractionContent = (item: InteractionContentRecord): ProfileContent =
   views: item.views,
   likes: item.likes,
   comments: item.comments_count,
+  isLiked: item.is_liked,
+  isBookmarked: item.is_bookmarked,
   isMature: item.is_mature,
   isPrivate: item.is_private ?? false,
 });

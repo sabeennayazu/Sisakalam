@@ -45,6 +45,8 @@ export interface ContentApiRecord {
   likes: number;
   comments_count: number;
   favorites_count: number;
+  is_liked: boolean;
+  is_bookmarked: boolean;
   created_at: string;
   updated_at: string;
   tag_names: string[];
