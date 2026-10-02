@@ -31,5 +31,61 @@ class PoemCreateTests(APITestCase):
 		self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 		self.assertEqual(response.data["author"], user.id)
 		self.assertEqual(response.data["status"], "published")
+		self.assertIsNotNone(response.data["published_at"])
+
+	def test_owner_can_fetch_private_poem_but_public_user_cannot(self):
+		user = get_user_model().objects.create_user(
+			username="private-poet",
+			email="private-poet@example.com",
+			password="strongpass123",
+		)
+		genre = Genre.objects.create(name="Private Poetry", type="poem")
+		self.client.force_authenticate(user=user)
+		create_response = self.client.post(
+			reverse("poem-list"),
+			{
+				"title": "A Private Poem",
+				"content": "Only its author can read this.",
+				"genre": genre.id,
+				"is_private": True,
+				"status": "published",
+			},
+			format="json",
+		)
+		poem_url = reverse("poem-detail", args=[create_response.data["id"]])
+
+		self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+		self.assertEqual(self.client.get(poem_url).status_code, status.HTTP_200_OK)
+
+		self.client.force_authenticate(user=None)
+		self.assertEqual(self.client.get(poem_url).status_code, status.HTTP_404_NOT_FOUND)
+
+	def test_publishing_draft_sets_published_timestamp(self):
+		user = get_user_model().objects.create_user(
+			username="draft-poet",
+			email="draft-poet@example.com",
+			password="strongpass123",
+		)
+		genre = Genre.objects.create(name="Draft Poetry", type="poem")
+		self.client.force_authenticate(user=user)
+		create_response = self.client.post(
+			reverse("poem-list"),
+			{
+				"title": "A Draft Poem",
+				"content": "Soon to be published.",
+				"genre": genre.id,
+				"status": "draft",
+			},
+			format="json",
+		)
+		publish_response = self.client.patch(
+			reverse("poem-detail", args=[create_response.data["id"]]),
+			{"status": "published"},
+			format="json",
+		)
+
+		self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+		self.assertEqual(publish_response.status_code, status.HTTP_200_OK)
+		self.assertIsNotNone(publish_response.data["published_at"])
 
 # Create your tests here.

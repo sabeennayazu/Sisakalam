@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { getCurrentUser } from "@/utils/account.api";
 import { getMediaUrl } from "@/utils/api";
 import { getPoem } from "@/utils/poems.api";
 import type { PoemApiRecord } from "@/types";
@@ -16,17 +17,35 @@ export default function PoemPage({ params }: PoemPageProps) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void params.then(({ id }) => getPoem<PoemApiRecord>(id).then((response) => {
-      if (!cancelled) response.status === "published" ? setPoem(response) : setNotFound(true);
-    }).catch((loadError) => {
-      if (!cancelled) {
-        if (loadError instanceof Error && "status" in loadError && (loadError as { status?: number }).status === 404) setNotFound(true);
-        else setError(true);
+    void params.then(async ({ id }) => {
+      try {
+        const [poemResponse, currentUser] = await Promise.all([
+          getPoem<PoemApiRecord>(id),
+          getCurrentUser().catch(() => null),
+        ]);
+        if (cancelled) return;
+
+        const isOwner = Boolean(currentUser && currentUser.id === poemResponse.author);
+        if (poemResponse.status !== "published" && !isOwner) {
+          setNotFound(true);
+          return;
+        }
+
+        setPoem(poemResponse);
+        setCurrentUserId(currentUser?.id ?? null);
+      } catch (loadError) {
+        if (!cancelled) {
+          if (loadError instanceof Error && "status" in loadError && (loadError as { status?: number }).status === 404) setNotFound(true);
+          else setError(true);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }).finally(() => { if (!cancelled) setLoading(false); }));
+    });
     return () => { cancelled = true; };
   }, [params]);
 
@@ -37,6 +56,11 @@ export default function PoemPage({ params }: PoemPageProps) {
 
   return (
     <div className="min-h-screen bg-white">
+      {poem.status !== "published" && currentUserId === poem.author && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
+          This is a draft/private poem. Only you can view it right now.
+        </div>
+      )}
       <section className="bg-[#1a1a1a] py-22 text-white">
         <div className="relative z-10 mx-auto max-w-6xl px-8">
           <div className="flex flex-col gap-12 md:flex-row">

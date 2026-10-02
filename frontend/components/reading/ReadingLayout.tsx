@@ -188,18 +188,7 @@ export default function ReadingLayout({
           }}
         >
           <Link href={`/stories/${storyId}`} className="mb-8 inline-block text-sm text-gray-500 hover:text-black">Back to {storyTitle}</Link>
-          {/* Hero Section - Only for Chapter 1 */}
-          {currentChapterNumber === 1 && (
-            <HeroSection
-              title={storyTitle}
-              synopsis={synopsis}
-              author={storyAuthor}
-              image={storyImage}
-              likes={likes}
-              views={views}
-              bookmarks={bookmarks}
-            />
-          )}
+         
 
           {/* Reading Observer - Top */}
           {hasPrevious && <ReadingObserver edge="top" onIntersect={handleNearTop} />}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import WritingPhase from "@/components/Writing/WritingPhase";
 import MetadataPhase from "@/components/Writing/MetadataPhase";
@@ -30,6 +30,14 @@ export interface WritingDraft {
 }
 
 export default function WritePage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-white text-sm text-gray-600">Loading editor...</div>}>
+      <WritePageContent />
+    </Suspense>
+  );
+}
+
+function WritePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const chapterStoryId = searchParams.get("mode") === "chapter" ? searchParams.get("storyId") : null;

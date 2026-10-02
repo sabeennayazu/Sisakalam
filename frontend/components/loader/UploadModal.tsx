@@ -116,7 +116,7 @@ export default function UploadModal() {
 	const retry = () => startTask(task);
 
 	return (
-		<div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/20 px-4 pt-5 backdrop-blur-[2px] md:pt-8">
+		<div className="fixed inset-0 z-100 flex items-start justify-center bg-black/20 px-4 pt-5 backdrop-blur-[2px] md:pt-8">
 			<div className="w-full max-w-5xl overflow-hidden rounded-xl border border-gray-100 bg-white shadow-2xl">
 				<div className="flex min-h-20 items-center gap-4 px-5 py-4 md:px-7">
 					<div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${task.status === "success" ? "bg-emerald-50 text-emerald-700" : task.status === "failure" ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-700"}`}>

@@ -72,6 +72,8 @@ class PoemSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         poem = Poem.objects.create(author=request.user, **validated_data)
         self._sync_tags(poem, tags_data)
+        if poem.status == PoemStatus.PUBLISHED:
+            poem.publish()
         return poem
 
     def update(self, instance, validated_data):
@@ -81,6 +83,8 @@ class PoemSerializer(serializers.ModelSerializer):
         instance.save()
         if tags_data is not None:
             self._sync_tags(instance, tags_data)
+        if instance.status == PoemStatus.PUBLISHED and instance.published_at is None:
+            instance.publish()
         return instance
 
     def _sync_tags(self, poem, tag_names):
@@ -140,7 +144,13 @@ class PoemViewSet(viewsets.ModelViewSet):
         return queryset.order_by("-published_at" if self.request.query_params.get("sort") == "latest" else "-created_at")
 
     def get_object(self):
-        obj = get_object_or_404(self.get_queryset(), pk=self.kwargs["pk"])
+        queryset = annotate_content_interactions(self.queryset, "poem", self.request.user)
+        if self.request.user.is_authenticated:
+            queryset = queryset.filter(Q(status=PoemStatus.PUBLISHED, is_private=False) | Q(author=self.request.user))
+        else:
+            queryset = queryset.filter(status=PoemStatus.PUBLISHED, is_private=False)
+
+        obj = get_object_or_404(queryset, pk=self.kwargs["pk"])
         if obj.status != PoemStatus.PUBLISHED and (not self.request.user.is_authenticated or obj.author_id != self.request.user.id):
             raise Http404
         self.check_object_permissions(self.request, obj)
