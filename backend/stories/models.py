@@ -50,7 +50,9 @@ class Story(models.Model):
     genre = models.ForeignKey(
         Genre,
         on_delete=models.CASCADE,
-        related_name="stories"
+        related_name="stories",
+        blank=True,
+        null=True,
     )
 
     tags = models.ManyToManyField(

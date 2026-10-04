@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import { WritingDraft, Phase, PublishErrors } from "@/app/write/page";
 import GenreSelector from "./GenreSelector";
 import TagInput from "./TagInput";
@@ -15,6 +14,8 @@ interface MetadataPhaseProps {
   onSaveDraft: () => void;
   isSaving: boolean;
   isPublishing: boolean;
+  saveError?: string | null;
+  saveSuccess?: string | null;
   publishErrors: PublishErrors;
   publishSuccess: string | null;
 }
@@ -27,39 +28,39 @@ export default function MetadataPhase({
   onSaveDraft,
   isSaving,
   isPublishing,
+  saveError,
+  saveSuccess,
   publishErrors,
   publishSuccess,
 }: MetadataPhaseProps) {
   const [coverPreview, setCoverPreview] = useState<string | null>(
     draft.coverImage
   );
-  const [genres, setGenres] = useState<Genre[]>([]);
-  const [genresLoading, setGenresLoading] = useState(false);
-  const [genresError, setGenresError] = useState<string | null>(null);
+  const [genreResults, setGenreResults] = useState<Partial<Record<"story" | "poem", { genres?: Genre[]; error?: string }>>>({});
+  const currentGenreResult = draft.type ? genreResults[draft.type] : undefined;
+  const genres = currentGenreResult?.genres ?? [];
+  const genresLoading = Boolean(draft.type && !currentGenreResult);
+  const genresError = currentGenreResult?.error ?? null;
 
   const isStory = draft.type === "story";
 
   // Fetch genres from backend whenever content type changes
   useEffect(() => {
-    if (!draft.type) return;
+    const contentType = draft.type;
+    if (!contentType) return;
 
     let cancelled = false;
-    setGenresLoading(true);
-    setGenresError(null);
 
-    fetchGenres(draft.type)
+    fetchGenres(contentType)
       .then((data: Genre[]) => {
         if (!cancelled) {
-          setGenres(data);
+          setGenreResults((current) => ({ ...current, [contentType]: { genres: data } }));
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setGenresError("Failed to load genres. Please try again.");
+          setGenreResults((current) => ({ ...current, [contentType]: { error: "Failed to load genres. Please try again." } }));
         }
-      })
-      .finally(() => {
-        if (!cancelled) setGenresLoading(false);
       });
 
     return () => {
@@ -70,12 +71,9 @@ export default function MetadataPhase({
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCoverPreview(reader.result as string);
-        onUpdateDraft({ coverImage: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      const previewUrl = URL.createObjectURL(file);
+      setCoverPreview(previewUrl);
+      onUpdateDraft({ coverImage: previewUrl, coverImageFile: file });
     }
   };
 
@@ -99,11 +97,10 @@ export default function MetadataPhase({
                 </h3>
                 <div className="relative aspect-2/3 bg-gray-200 rounded-xl overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center mb-4 group cursor-pointer hover:border-gray-400 transition-colors">
                   {coverPreview ? (
-                    <Image
+                    <img
                       src={coverPreview}
                       alt="Cover preview"
-                      fill
-                      className="object-cover"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
                     <div className="text-center">
@@ -324,6 +321,8 @@ export default function MetadataPhase({
 
         {/* ACTION BUTTONS */}
         <div className="mt-12 border-t border-gray-200 pt-8">
+          {saveError && <p className="mb-3 text-sm text-red-600" role="alert">{saveError}</p>}
+          {saveSuccess && <p className="mb-3 text-sm text-emerald-700" role="status">{saveSuccess}</p>}
           {publishErrors.general && (
             <p className="mb-4 text-sm text-red-600" role="alert">
               {publishErrors.general}

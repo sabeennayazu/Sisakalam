@@ -25,7 +25,7 @@ export default function StoriesTab({ stories, loading, error, isOwner, viewerId,
         <h2 className="font-serif text-xl font-bold text-black">All Stories</h2>
         <span className="text-xs font-bold uppercase tracking-widest text-gray-500">{stories.length} Works</span>
       </div>
-      <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 lg:gap-8">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] justify-items-center gap-6 md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] lg:gap-8">
         {stories.map((item) => <UniversalCard key={`${item.type}-${item.id}`} {...item} isOwner={item.authorId === viewerId} isPrivate={item.isPrivate} onDeleteContent={() => onDelete(item)} onTogglePrivacy={() => onTogglePrivacy(item)} />)}
       </div>
     </div>

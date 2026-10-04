@@ -108,7 +108,7 @@ export default function ContentResultsDisplay({ title, label }: ContentResultsDi
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
                 </div>
               ) : mainData.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 lg:gap-8">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] justify-items-center gap-6 md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] lg:gap-8">
                   {mainData.map((item) => (
                     <UniversalCard
                       key={item.id}

@@ -29,7 +29,7 @@ export const getPoem = async <T = unknown>(poemId: string | number): Promise<T> 
  * @returns The created poem record.
  * @requiresAuthentication true
  */
-export const createPoem = async (payload: Record<string, unknown>) => {
+export const createPoem = async (payload: Record<string, unknown> | FormData) => {
   return apiFetch("/poems/", { method: "POST", body: payload });
 };
 
@@ -41,7 +41,7 @@ export const createPoem = async (payload: Record<string, unknown>) => {
  * @returns The updated poem record.
  * @requiresAuthentication true
  */
-export const updatePoem = async (poemId: string | number, payload: Record<string, unknown>) => {
+export const updatePoem = async (poemId: string | number, payload: Record<string, unknown> | FormData) => {
   return apiFetch(`/poems/${poemId}/`, { method: "PATCH", body: payload });
 };
 

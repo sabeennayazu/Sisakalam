@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
-  ChevronDown,
   User,
   Plus,
   Bell,
@@ -15,13 +14,12 @@ import {
   LogOut,
 } from "lucide-react";
 
-import MegaMenu from "./MegaMenu";
-import BrowseMenu from "./BrowseMenu";
 import ProfileMenu from "./ProfileMenu";
+import NotificationPopup from "@/components/Notifications/NotificationPopup";
 import { logout, isAuthenticated } from "@/utils/auth";
 
 export default function Navbar() {
-  const [openMenu, setOpenMenu] = useState<"genre" | "browse" | "profile" | null>(null);
+  const [openMenu, setOpenMenu] = useState<"profile" | "notifications" | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isAuth, setIsAuth] = useState<boolean | null>(null); // null = auth not checked yet
   const navRef = useRef<HTMLDivElement>(null);
@@ -78,28 +76,12 @@ export default function Navbar() {
               </Link>
 
               <div className="flex items-center gap-8">
-                <div
-                  onMouseEnter={() => setOpenMenu("browse")}
-                  onMouseLeave={() => setOpenMenu(null)}
-                  className="relative"
-                >
-                  <button className="flex items-center gap-1 text-sm text-black">
-                    Browse <ChevronDown size={16} />
-                  </button>
-                  {openMenu === "browse" && <BrowseMenu />}
-                </div>
-
-                <div
-                  onMouseEnter={() => setOpenMenu("genre")}
-                  onMouseLeave={() => setOpenMenu(null)}
-                  className="relative"
-                >
-                  <button className="flex items-center gap-1 text-sm text-black">
-                    Genre <ChevronDown size={16} />
-                  </button>
-                  {openMenu === "genre" && <MegaMenu />}
-                </div>
-
+                <Link href="/stories" className="text-sm text-black">
+                  Stories
+                </Link>
+                <Link href="/poems" className="text-sm text-black">
+                  Poems
+                </Link>
                 <Link href="/library" className="text-sm text-black">
                   Library
                 </Link>
@@ -119,12 +101,26 @@ export default function Navbar() {
                   Start Writing
                 </button>
               </Link>
-
-              <Bell
-                size={20}
-                className="cursor-pointer text-black"
-                strokeWidth={2}
-              />
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setOpenMenu(openMenu === "notifications" ? null : "notifications")}
+                  aria-label="Notifications"
+                  aria-expanded={openMenu === "notifications"}
+                  className="flex items-center text-black"
+                >
+                <Bell
+                  size={20}
+                  className="cursor-pointer"
+                  strokeWidth={2}
+                />
+                </button>
+                {openMenu === "notifications" && (
+                  <div className="absolute right-0 top-full z-50 mt-3">
+                    <NotificationPopup />
+                  </div>
+                )}
+              </div>
 
               <div
                 onMouseEnter={() => setOpenMenu("profile")}
@@ -188,20 +184,20 @@ export default function Navbar() {
           </div>
 
           <div className="p-5 space-y-6 text-gray-700">
-            <div className="flex items-center gap-3 cursor-pointer">
-              <LayoutGrid size={18} className="text-black" />
-              Browse
-            </div>
-
-            <div className="flex items-center gap-3 cursor-pointer">
-              <ChevronDown size={18} className="text-black" />
-              Genre
-            </div>
-
-            <div className="flex items-center gap-3 cursor-pointer">
+            <Link href="/stories" className="flex items-center gap-3 cursor-pointer" onClick={() => setMobileOpen(false)}>
               <BookOpen size={18} className="text-black" />
+              Stories
+            </Link>
+
+            <Link href="/poems" className="flex items-center gap-3 cursor-pointer" onClick={() => setMobileOpen(false)}>
+              <PenLine size={18} className="text-black" />
+              Poems
+            </Link>
+
+            <Link href="/library" className="flex items-center gap-3 cursor-pointer" onClick={() => setMobileOpen(false)}>
+              <LayoutGrid size={18} className="text-black" />
               Library
-            </div>
+            </Link>
 
             <div className="flex items-center gap-3 cursor-pointer">
               <User size={18} className="text-black" />

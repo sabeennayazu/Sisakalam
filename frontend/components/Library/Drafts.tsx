@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import UniversalCard, { ContentType } from "@/components/shared/UniversalCard";
 import { deletePoem, getDrafts as getPoemDrafts } from "@/utils/poems.api";
 import { deleteStory, getDrafts as getStoryDrafts } from "@/utils/stories.api";
+import { getMediaUrl } from "@/utils/api";
 import { Edit2 } from "lucide-react";
 
 interface DraftRecord {
@@ -67,32 +68,7 @@ export default function Drafts() {
     }, []);
 
     const openDraft = (draft: LibraryDraft) => {
-        let savedDraft: Partial<LibraryDraft> = {};
-        const localDraft = localStorage.getItem("writing-draft");
-        if (localDraft) {
-            try {
-                const parsed = JSON.parse(localDraft) as Partial<LibraryDraft>;
-                if (String(parsed.id) === String(draft.id)) savedDraft = parsed;
-            } catch {
-                savedDraft = {};
-            }
-        }
-
-        localStorage.setItem("writing-draft", JSON.stringify({
-            id: String(draft.id),
-            type: draft.type,
-            title: draft.title,
-            content: savedDraft.content ?? draft.content ?? "",
-            synopsis: draft.synopsis ?? "",
-            genre: draft.genre_name ?? "",
-            genreId: null,
-            tags: draft.tag_names ?? draft.tags ?? [],
-            coverImage: draft.image ?? null,
-            matureContent: draft.is_mature ?? false,
-            visibility: "draft",
-            lastSaved: draft.updated_at,
-        }));
-        router.push("/write");
+        router.push(`/write?type=${draft.type}&id=${draft.id}`);
     };
 
     const handleDelete = async (event: React.MouseEvent, draft: LibraryDraft) => {
@@ -131,7 +107,7 @@ export default function Drafts() {
                 <h2 className="text-2xl font-bold text-gray-900">Your Drafts</h2>
                 <span className="text-sm text-gray-500">{drafts.length} {drafts.length === 1 ? "draft" : "drafts"}</span>
             </div>
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] justify-items-center gap-6 md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
                 {drafts.map((draft) => (
                     <UniversalCard
                         key={`${draft.type}-${draft.id}`}
@@ -139,7 +115,7 @@ export default function Drafts() {
                         title={draft.title || "Untitled"}
                         author={draft.author_name ?? "You"}
                         genre={draft.genre_name ?? ""}
-                        image={draft.image ?? ""}
+                        image={getMediaUrl(draft.image ?? null)}
                         views={0}
                         likes={0}
                         comments={0}

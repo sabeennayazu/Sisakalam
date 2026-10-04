@@ -29,7 +29,7 @@ export const getStory = async <T = unknown>(storyId: string | number): Promise<T
  * @returns The created story record.
  * @requiresAuthentication true
  */
-export const createStory = async (payload: Record<string, unknown>) => {
+export const createStory = async (payload: Record<string, unknown> | FormData) => {
   return apiFetch("/stories/", { method: "POST", body: payload });
 };
 
@@ -41,7 +41,7 @@ export const createStory = async (payload: Record<string, unknown>) => {
  * @returns The updated story record.
  * @requiresAuthentication true
  */
-export const updateStory = async (storyId: string | number, payload: Record<string, unknown>) => {
+export const updateStory = async (storyId: string | number, payload: Record<string, unknown> | FormData) => {
   return apiFetch(`/stories/${storyId}/`, { method: "PATCH", body: payload });
 };
 

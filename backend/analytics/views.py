@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -7,7 +8,23 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from poems.models import Poem
 from stories.models import Genre, Story
-from .models import DailyActiveUser, GenrePopularity, ReadingDuration, RecommendationClick, StoryImpression
+from .models import (
+    DailyActiveUser,
+    GenrePopularity,
+    PoemImpression,
+    ReadingDuration,
+    RecommendationClick,
+    StoryImpression,
+)
+
+
+def _sync_content_view_count(model, instance):
+    if model is Story:
+        instance.views = instance.impressions.count()
+    elif model is Poem:
+        instance.views = instance.impressions.count()
+    instance.save(update_fields=["views"])
+    return instance.views
 
 
 class StoryViewEventView(APIView):
@@ -15,10 +32,30 @@ class StoryViewEventView(APIView):
 
     def post(self, request, pk):
         story = get_object_or_404(Story, pk=pk)
-        StoryImpression.objects.create(story=story, user=request.user if request.user.is_authenticated else None, ip_address=request.META.get("REMOTE_ADDR"))
-        story.views = story.views + 1
-        story.save(update_fields=["views"])
-        return Response({"detail": "Story view recorded."})
+        if request.user.is_authenticated and story.author_id == request.user.id:
+            return Response({"viewed": False, "is_new_view": False, "views_count": story.views})
+
+        created = False
+        with transaction.atomic():
+            if request.user.is_authenticated:
+                try:
+                    _, created = StoryImpression.objects.get_or_create(story=story, user=request.user)
+                except IntegrityError:
+                    created = False
+            else:
+                StoryImpression.objects.create(
+                    story=story,
+                    user=None,
+                    ip_address=request.META.get("REMOTE_ADDR"),
+                )
+                created = True
+
+        story.views = _sync_content_view_count(Story, story)
+        return Response({
+            "viewed": True,
+            "is_new_view": created,
+            "views_count": story.views,
+        })
 
 
 class PoemViewEventView(APIView):
@@ -26,9 +63,30 @@ class PoemViewEventView(APIView):
 
     def post(self, request, pk):
         poem = get_object_or_404(Poem, pk=pk)
-        poem.views = poem.views + 1
-        poem.save(update_fields=["views"])
-        return Response({"detail": "Poem view recorded."})
+        if request.user.is_authenticated and poem.author_id == request.user.id:
+            return Response({"viewed": False, "is_new_view": False, "views_count": poem.views})
+
+        created = False
+        with transaction.atomic():
+            if request.user.is_authenticated:
+                try:
+                    _, created = PoemImpression.objects.get_or_create(poem=poem, user=request.user)
+                except IntegrityError:
+                    created = False
+            else:
+                PoemImpression.objects.create(
+                    poem=poem,
+                    user=None,
+                    ip_address=request.META.get("REMOTE_ADDR"),
+                )
+                created = True
+
+        poem.views = _sync_content_view_count(Poem, poem)
+        return Response({
+            "viewed": True,
+            "is_new_view": created,
+            "views_count": poem.views,
+        })
 
 
 class ReadingDurationView(APIView):

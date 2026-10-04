@@ -95,7 +95,7 @@ export default function UniversalCard({
     const bookmarkTargetType = type === "story" || type === "poem" ? type : null;
     const savedTime = savedAt ? formatSavedTime(savedAt) : "just now";
     const destination = status === "draft"
-        ? "/write"
+        ? `/write?type=${type}&id=${id}`
         : type === "story"
             ? `/stories/${id}`
             : type === "poem"
@@ -131,7 +131,7 @@ export default function UniversalCard({
 
     return (
         <div
-            className="min-w-[150px] md:min-w-[180px] lg:min-w-[200px]  group cursor-pointer relative "
+            className="group relative w-[150px] shrink-0 cursor-pointer md:w-[180px] lg:w-[200px]"
             onClick={handleCardClick}
             onKeyDown={(event) => {
                 if ((event.key === "Enter" || event.key === " ") && destination) {
@@ -157,7 +157,7 @@ export default function UniversalCard({
 
             {/* Cover Image Container */}
             <div
-                className={`relative overflow-hidden rounded-lg md:rounded-xl mb-3 mr-2 md:mb-4 shrink-0 h-48 md:h-56 lg:h-72 ${
+                className={`relative mb-3 overflow-hidden rounded-[20px] md:mb-4 md:rounded-[22px] h-[220px] sm:h-[250px] md:h-[280px] xl:h-[300px] ${
                     selectionMode && isSelected ? "ring-2 ring-black" : ""
                 }`}
             >

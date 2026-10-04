@@ -1,12 +1,14 @@
 "use client";
 
-import React, { Suspense, useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import WritingPhase from "@/components/Writing/WritingPhase";
 import MetadataPhase from "@/components/Writing/MetadataPhase";
 import { startPublishing, startSaving } from "@/components/loader/UploadModal";
 import { createChapter, createStory, getStory, updateStory } from "@/utils/stories.api";
 import { createPoem, updatePoem } from "@/utils/poems.api";
+import { getEditableDraft, type DraftContentType } from "@/utils/drafts.api";
+import { getMediaUrl } from "@/utils/api";
 import type { StoryApiRecord } from "@/types";
 
 export type ContentType = "story" | "poem";
@@ -24,10 +26,51 @@ export interface WritingDraft {
   tags: string[];
   synopsis: string;
   coverImage: string | null;
+  coverImageFile: File | null;
   matureContent: boolean;
   visibility: "draft" | "public" | "private";
   lastSaved: Date;
 }
+
+const toRequestBody = (payload: Record<string, unknown>, file: File | null): Record<string, unknown> | FormData => {
+  if (!file) return payload;
+
+  const formData = new FormData();
+
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item !== undefined && item !== null) {
+          formData.append(key, String(item));
+        }
+      });
+      return;
+    }
+
+    if (value instanceof File) {
+      formData.append(key, value, value.name);
+      return;
+    }
+
+    formData.append(key, String(value));
+  });
+
+  formData.append("image", file, file.name);
+  return formData;
+};
+
+const buildPayload = (snapshot: WritingDraft, status: "draft" | "published"): Record<string, unknown> => ({
+  title: snapshot.title.trim() || (snapshot.type === "story" ? "Untitled Story" : "Untitled Poem"),
+  content: snapshot.content,
+  ...(snapshot.type === "story" ? { synopsis: snapshot.synopsis.trim() } : {}),
+  genre: snapshot.genreId,
+  tags: snapshot.tags,
+  is_mature: snapshot.matureContent,
+  is_private: snapshot.visibility === "private",
+  status,
+});
 
 export default function WritePage() {
   return (
@@ -41,6 +84,8 @@ function WritePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const chapterStoryId = searchParams.get("mode") === "chapter" ? searchParams.get("storyId") : null;
+  const draftIdParam = searchParams.get("id");
+  const draftTypeParam = searchParams.get("type") as DraftContentType | null;
   const [parentStory, setParentStory] = useState<StoryApiRecord | null>(null);
   const [phase, setPhase] = useState<Phase>("writing");
   const [draft, setDraft] = useState<WritingDraft>({
@@ -53,6 +98,7 @@ function WritePageContent() {
     tags: [],
     synopsis: "",
     coverImage: null,
+    coverImageFile: null,
     matureContent: false,
     visibility: "draft",
     lastSaved: new Date(),
@@ -64,6 +110,60 @@ function WritePageContent() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishErrors, setPublishErrors] = useState<PublishErrors>({});
   const [publishSuccess, setPublishSuccess] = useState<string | null>(null);
+  const [isDraftReady, setIsDraftReady] = useState(false);
+  const [draftLoadError, setDraftLoadError] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const draftRef = useRef(draft);
+  const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const editVersionRef = useRef(0);
+  const pendingSavesRef = useRef(0);
+  const hydratedDraftKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (chapterStoryId) {
+      setIsDraftReady(true);
+      return;
+    }
+
+    if (!draftIdParam) {
+      setIsDraftReady(true);
+      return;
+    }
+
+    if (draftTypeParam !== "poem" && draftTypeParam !== "story") {
+      setDraftLoadError("The draft type is missing or invalid.");
+      setIsDraftReady(true);
+      return;
+    }
+
+    const draftKey = `${draftTypeParam}:${draftIdParam}`;
+    if (hydratedDraftKeyRef.current === draftKey) {
+      setIsDraftReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    setIsDraftReady(false);
+    setDraftLoadError(null);
+    getEditableDraft(draftTypeParam, draftIdParam)
+      .then((loadedDraft) => {
+        if (cancelled) return;
+        hydratedDraftKeyRef.current = draftKey;
+        draftRef.current = { ...loadedDraft, coverImageFile: null };
+        setDraft(draftRef.current);
+        setIsDirty(false);
+        setIsDraftReady(true);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setDraftLoadError(error instanceof Error ? error.message : "Unable to load this draft.");
+        setIsDraftReady(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chapterStoryId, draftIdParam, draftTypeParam]);
 
   useEffect(() => {
     if (!chapterStoryId) return;
@@ -77,41 +177,80 @@ function WritePageContent() {
         } catch {
           localStorage.removeItem(`chapter-draft:${story.id}`);
         }
-        setDraft((current) => ({ ...current, ...savedChapterDraft, type: "story", title: savedChapterDraft.title || `Chapter ${story.chapter_count + 1}`, genre: story.genre_name ?? "", genreId: story.genre, synopsis: story.synopsis }));
+        const chapterDraft = { ...draftRef.current, ...savedChapterDraft, type: "story" as const, title: savedChapterDraft.title || `Chapter ${story.chapter_count + 1}`, genre: story.genre_name ?? "", genreId: story.genre, synopsis: story.synopsis };
+        draftRef.current = chapterDraft;
+        setDraft(chapterDraft);
       })
       .catch(() => setPublishErrors({ general: "Unable to load the parent story." }));
   }, [chapterStoryId]);
 
-  // Debounced authenticated autosave for standalone drafts.
-  useEffect(() => {
-    if (chapterStoryId || !draft.type) return;
-    const timer = setTimeout(() => {
-      if (draft.title || draft.content) {
-        setIsSaving(true);
-        setSaveError(null);
-        const payload = draft.type === "poem"
-          ? { title: draft.title.trim() || "Untitled Poem", content: draft.content, genre: draft.genreId, tags: draft.tags, is_mature: draft.matureContent, is_private: draft.visibility === "private", status: "draft" }
-          : { title: draft.title.trim() || "Untitled Story", synopsis: draft.synopsis.trim(), genre: draft.genreId, tags: draft.tags, is_mature: draft.matureContent, is_private: draft.visibility === "private", status: "draft" };
-        const draftId = Number(draft.id);
-        const request = draftId > 0
-          ? draft.type === "poem" ? updatePoem(draftId, payload) : updateStory(draftId, payload)
-          : draft.type === "poem" ? createPoem(payload) : createStory(payload);
-        void request.then((result) => {
-          if (result && typeof result === "object" && "id" in result) setDraft((current) => ({ ...current, id: String(result.id), lastSaved: new Date() }));
-        }).catch((saveFailure) => setSaveError(saveFailure instanceof Error ? saveFailure.message : "Unable to save draft.")).finally(() => setIsSaving(false));
+  const persistDraft = useCallback((snapshot: WritingDraft, status: "draft" | "published") => {
+    if (!snapshot.type) return Promise.reject(new Error("Choose poem or story before saving."));
+    const editVersion = editVersionRef.current;
+    pendingSavesRef.current += 1;
+    setIsSaving(true);
+    const request = persistenceQueueRef.current.catch(() => undefined).then(async () => {
+      const payload = buildPayload(snapshot, status);
+      const body = toRequestBody(payload, snapshot.coverImageFile);
+      const currentId = Number(draftRef.current.id);
+      const result = snapshot.type === "poem"
+        ? currentId > 0 ? await updatePoem(currentId, body) : await createPoem(body)
+        : currentId > 0 ? await updateStory(currentId, body) : await createStory(body);
+
+      if (result && typeof result === "object" && "id" in result) {
+        const id = String(result.id);
+        const savedImage = "image" in result && typeof result.image === "string" ? getMediaUrl(result.image) : null;
+        const uploadedFileUnchanged = Boolean(snapshot.coverImageFile && draftRef.current.coverImageFile === snapshot.coverImageFile && savedImage);
+        const updatedDraft = {
+          ...draftRef.current,
+          id,
+          lastSaved: new Date(),
+          ...(uploadedFileUnchanged ? { coverImage: savedImage, coverImageFile: null } : {}),
+        };
+        draftRef.current = updatedDraft;
+        setDraft((current) => ({ ...current, ...updatedDraft }));
+        if (!(currentId > 0)) {
+          const key = `${snapshot.type}:${id}`;
+          hydratedDraftKeyRef.current = key;
+          router.replace(`/write?type=${snapshot.type}&id=${id}`, { scroll: false });
+        }
       }
-    }, 1500); // Autosave after 1.5 seconds of inactivity
+
+      if (status === "draft" && editVersion === editVersionRef.current) {
+        setIsDirty(false);
+        setSaveError(null);
+        setSaveSuccess("Draft saved.");
+      }
+      return result;
+    });
+
+    persistenceQueueRef.current = request.then(() => undefined, () => undefined);
+    return request.finally(() => {
+      pendingSavesRef.current = Math.max(0, pendingSavesRef.current - 1);
+      setIsSaving(pendingSavesRef.current > 0);
+    });
+  }, [router]);
+
+  useEffect(() => {
+    if (chapterStoryId || isPublishing || !isDraftReady || !isDirty || !draft.type || (!draft.title && !draft.content)) return;
+    const timer = setTimeout(() => {
+      setSaveError(null);
+      void persistDraft(draft, "draft").catch((saveFailure: unknown) => {
+        setSaveError(saveFailure instanceof Error ? saveFailure.message : "Unable to save draft.");
+      });
+    }, 1500);
 
     return () => clearTimeout(timer);
-  }, [chapterStoryId, draft]);
+  }, [chapterStoryId, draft, isDirty, isDraftReady, isPublishing, persistDraft]);
 
   const handleUpdateDraft = (updates: Partial<WritingDraft>) => {
     setSaveSuccess(null);
     setSaveError(null);
-    setDraft((prev) => ({
-      ...prev,
-      ...updates,
-    }));
+    editVersionRef.current += 1;
+    const nextDraft = { ...draftRef.current, ...updates };
+    draftRef.current = nextDraft;
+    setDraft(nextDraft);
+    setIsDirty(true);
   };
 
   const validateDraft = (): PublishErrors => {
@@ -161,22 +300,16 @@ function WritePageContent() {
       return;
     }
 
-    const payload = contentType === "poem"
-      ? { title: draft.title.trim(), content: draft.content, genre: draft.genreId, tags: draft.tags, is_mature: draft.matureContent, is_private: draft.visibility === "private", status: "published" }
-      : { title: draft.title.trim(), content: draft.content, synopsis: draft.synopsis.trim(), genre: draft.genreId, tags: draft.tags, is_mature: draft.matureContent, is_private: draft.visibility === "private", status: "published" };
-
-    const draftId = Number(draft.id);
     startPublishing({
       type: contentType,
-      payload,
-      request: draftId > 0
-        ? () => contentType === "poem" ? updatePoem(draftId, payload) : updateStory(draftId, payload)
-        : undefined,
+      payload: { title: draft.title.trim() },
+      request: () => persistDraft(draftRef.current, "published"),
       onSuccess: (result) => {
         if (result && typeof result === "object" && "id" in result) {
           router.push(contentType === "story" ? `/stories/${result.id}` : `/poems/${result.id}`);
         }
       },
+      onSettled: () => setIsPublishing(false),
     });
   };
 
@@ -189,7 +322,9 @@ function WritePageContent() {
       setSaveSuccess(null);
       try {
         localStorage.setItem(`chapter-draft:${chapterStoryId}`, JSON.stringify({ title: draft.title, content: draft.content }));
-        setDraft((current) => ({ ...current, lastSaved: new Date() }));
+        const chapterDraft = { ...draftRef.current, lastSaved: new Date() };
+        draftRef.current = chapterDraft;
+        setDraft(chapterDraft);
         setSaveSuccess("Chapter draft saved on this device.");
       } catch {
         setSaveError("Unable to save this chapter draft on this device.");
@@ -199,42 +334,25 @@ function WritePageContent() {
       return;
     }
 
-    const payload = draft.type === "poem"
-      ? {
-          title: draft.title.trim() || "Untitled Poem",
-          content: draft.content,
-          genre: draft.genreId,
-          tags: draft.tags,
-          is_mature: draft.matureContent,
-          is_private: draft.visibility === "private",
-          status: "draft",
-        }
-      : {
-          title: draft.title.trim() || "Untitled Story",
-          synopsis: draft.synopsis.trim(),
-          genre: draft.genreId,
-          tags: draft.tags,
-          is_mature: draft.matureContent,
-          is_private: draft.visibility === "private",
-          status: "draft",
-        };
-
-    setIsSaving(true);
     startSaving({
       type: draft.type,
-      payload,
-      onSuccess: (result) => {
-        if (result && typeof result === "object" && "id" in result) {
-          setDraft((current) => ({
-            ...current,
-            id: String(result.id),
-            lastSaved: new Date(),
-          }));
-        }
-      },
-      onSettled: () => setIsSaving(false),
+      payload: { title: draft.title.trim() || (draft.type === "story" ? "Untitled Story" : "Untitled Poem") },
+      request: () => persistDraft(draftRef.current, "draft"),
     });
   };
+
+  if (!chapterStoryId && draftIdParam && !isDraftReady) {
+    return <div className="flex min-h-screen items-center justify-center bg-white text-sm text-gray-600">Loading your draft...</div>;
+  }
+
+  if (!chapterStoryId && draftLoadError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-6 text-center">
+        <p className="text-sm text-red-600" role="alert">{draftLoadError}</p>
+        <button type="button" onClick={() => router.push("/library")} className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white">Back to Library</button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -263,6 +381,8 @@ function WritePageContent() {
           onSaveDraft={handleSaveDraft}
           isSaving={isSaving}
           isPublishing={isPublishing}
+          saveError={saveError}
+          saveSuccess={saveSuccess}
           publishErrors={publishErrors}
           publishSuccess={publishSuccess}
         />

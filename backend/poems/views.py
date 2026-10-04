@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Avg, F, Q, Value
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, serializers, status, viewsets
@@ -25,6 +25,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
 
 class PoemSerializer(serializers.ModelSerializer):
+    content = serializers.CharField(required=False, allow_blank=True)
     genre = serializers.PrimaryKeyRelatedField(queryset=Genre.objects.all(), required=False, allow_null=True)
     tags = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
     tag_names = serializers.SerializerMethodField(read_only=True)
@@ -69,6 +70,8 @@ class PoemSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         tags_data = validated_data.pop("tags", [])
+        if validated_data.get("status") == PoemStatus.PUBLISHED and not validated_data.get("content", "").strip():
+            raise serializers.ValidationError({"content": "Write the poem before publishing it."})
         request = self.context.get("request")
         poem = Poem.objects.create(author=request.user, **validated_data)
         self._sync_tags(poem, tags_data)
@@ -78,6 +81,10 @@ class PoemSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         tags_data = validated_data.pop("tags", None)
+        content = validated_data.get("content", instance.content)
+        status_value = validated_data.get("status", instance.status)
+        if status_value == PoemStatus.PUBLISHED and not content.strip():
+            raise serializers.ValidationError({"content": "Write the poem before publishing it."})
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -141,7 +148,24 @@ class PoemViewSet(viewsets.ModelViewSet):
         if author_id:
             queryset = queryset.filter(author_id=author_id)
 
-        return queryset.order_by("-published_at" if self.request.query_params.get("sort") == "latest" else "-created_at")
+        sort_key = (self.request.query_params.get("sort") or "newest").strip().lower()
+        if sort_key == "latest":
+            sort_key = "newest"
+
+        queryset = queryset.annotate(
+            popularity_score=(F("views") + (F("api_likes_count") * Value(3)) + (F("api_comments_count") * Value(2))),
+            api_average_rating=Avg("comments__rating"),
+        )
+
+        sort_map = {
+            "popular": ["-popularity_score", "-views", "-api_likes_count", "-api_comments_count", "-published_at"],
+            "most_liked": ["-api_likes_count", "-views", "-api_comments_count", "-published_at"],
+            "most_commented": ["-api_comments_count", "-views", "-api_likes_count", "-published_at"],
+            "newest": ["-published_at", "-created_at"],
+            "recently_updated": ["-updated_at", "-published_at"],
+            "highest_rated": ["-api_average_rating", "-api_comments_count", "-published_at"],
+        }
+        return queryset.order_by(*sort_map.get(sort_key, sort_map["newest"]))
 
     def get_object(self):
         queryset = annotate_content_interactions(self.queryset, "poem", self.request.user)

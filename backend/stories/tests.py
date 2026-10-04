@@ -4,6 +4,76 @@ from rest_framework.test import APITestCase
 
 
 class StoriesEndpointTests(APITestCase):
+    def test_draft_story_content_and_metadata_survive_fetch_and_update(self):
+        from django.contrib.auth import get_user_model
+        from stories.models import Chapter, Genre, Story
+
+        user = get_user_model().objects.create_user(username="draft-flow-writer", email="draft-flow-story@example.com", password="strongpass123")
+        genre = Genre.objects.create(name="Draft Flow Fiction", type="story")
+        self.client.force_authenticate(user=user)
+
+        created = self.client.post(reverse("story-list"), {
+            "title": "Initial title",
+            "content": "Initial chapter text",
+            "status": "draft",
+        }, format="json")
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        story = Story.objects.get(pk=created.data["id"])
+        chapter = Chapter.objects.get(story=story)
+        self.assertEqual(chapter.content, "Initial chapter text")
+        self.assertIsNone(story.genre)
+
+        draft_url = reverse("story-detail", kwargs={"pk": story.pk})
+        loaded = self.client.get(draft_url)
+        self.assertEqual(loaded.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.get(reverse("story-chapters", kwargs={"story_id": story.pk})).data[0]["content"], "Initial chapter text")
+
+        updated = self.client.patch(draft_url, {
+            "title": "Updated title",
+            "synopsis": "Updated synopsis",
+            "genre": genre.id,
+            "tags": ["edited"],
+            "content": "Updated chapter text",
+            "is_mature": True,
+            "is_private": True,
+        }, format="json")
+        self.assertEqual(updated.status_code, status.HTTP_200_OK)
+        self.assertEqual(updated.data["title"], "Updated title")
+        self.assertEqual(updated.data["synopsis"], "Updated synopsis")
+        self.assertEqual(updated.data["genre"], genre.id)
+        self.assertEqual(updated.data["tag_names"], ["edited"])
+        self.assertTrue(updated.data["is_mature"])
+        self.assertTrue(updated.data["is_private"])
+        listed = self.client.get(reverse("story-list"), {"mine": 1, "status": "draft"})
+        self.assertIn(story.id, [record["id"] for record in listed.data["results"]])
+        chapter.refresh_from_db()
+        self.assertEqual(chapter.content, "Updated chapter text")
+        published = self.client.post(reverse("story-publish", kwargs={"pk": story.pk}))
+        self.assertEqual(published.status_code, status.HTTP_200_OK)
+        self.assertEqual(Chapter.objects.filter(story=story).count(), 1)
+        chapter.refresh_from_db()
+        self.assertEqual(chapter.content, "Updated chapter text")
+
+        self.client.force_authenticate(user=None)
+        self.assertEqual(self.client.get(draft_url).status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_only_owner_can_delete_a_story_draft(self):
+        from django.contrib.auth import get_user_model
+        from stories.models import Genre, Story
+
+        user_model = get_user_model()
+        owner = user_model.objects.create_user(username="delete-story-owner", email="delete-story-owner@example.com", password="strongpass123")
+        other = user_model.objects.create_user(username="delete-story-other", email="delete-story-other@example.com", password="strongpass123")
+        genre = Genre.objects.create(name="Deletion Fiction", type="story")
+        story = Story.objects.create(title="Delete me", synopsis="Draft", author=owner, genre=genre, status="draft")
+        story_url = reverse("story-detail", kwargs={"pk": story.pk})
+
+        self.client.force_authenticate(user=other)
+        self.assertEqual(self.client.delete(story_url).status_code, status.HTTP_404_NOT_FOUND)
+        self.client.force_authenticate(user=owner)
+        self.assertEqual(self.client.delete(story_url).status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Story.objects.filter(pk=story.pk).exists())
+
     def test_stories_list_endpoint_is_available(self):
         response = self.client.get(reverse("story-list"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -6,6 +6,7 @@ import ReadingLayout from "@/components/reading/ReadingLayout";
 import { ChapterData, ChapterReference } from "@/hooks/useContinuousChapters";
 import { getCurrentUser } from "@/utils/account.api";
 import { getMediaUrl } from "@/utils/api";
+import { recordStoryView } from "@/utils/analytics.api";
 import { getStory, getStoryChapterBySlug, getStoryChapters } from "@/utils/stories.api";
 import type { ChapterApiRecord, ChapterReferenceApiRecord, StoryApiRecord } from "@/types";
 
@@ -23,6 +24,8 @@ export default function ChapterReadingPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const storyViewRecordedRef = useRef<number | null>(null);
   const readerDataRef = useRef<ReaderData | null>(readerData);
   const internalRouteKeyRef = useRef<string | null>(null);
   readerDataRef.current = readerData;
@@ -78,6 +81,7 @@ export default function ChapterReadingPage({ params }: PageProps) {
           getStoryChapters<ChapterReferenceApiRecord[]>(id, { metadata: true }),
           getCurrentUser().catch(() => null),
         ]);
+        setCurrentUserId(currentUser?.id ?? null);
         const isOwner = Boolean(currentUser && currentUser.id === story.author);
         if (story.status !== "published" && !isOwner) { setNotFound(true); return; }
 
@@ -109,6 +113,27 @@ export default function ChapterReadingPage({ params }: PageProps) {
 
     return () => { cancelled = true; };
   }, [id, chapterSlug]);
+
+  useEffect(() => {
+    if (!readerData) return;
+    if (storyViewRecordedRef.current === readerData.story.id) return;
+    if (currentUserId !== null && currentUserId === readerData.story.author) {
+      storyViewRecordedRef.current = readerData.story.id;
+      return;
+    }
+
+    storyViewRecordedRef.current = readerData.story.id;
+    void recordStoryView(readerData.story.id).then((response) => {
+      const responseData = response as { views_count?: number };
+      if (typeof responseData.views_count === "number") {
+        setReaderData((current) => current && current.story.id === readerData.story.id
+          ? { ...current, story: { ...current.story, views: responseData.views_count ?? current.story.views } }
+          : current);
+      }
+    }).catch((viewError) => {
+      console.warn("Unable to record story view.", viewError);
+    });
+  }, [currentUserId, readerData]);
 
   if (loading) return <StateMessage message="Loading chapter..." />;
   if (error) return <StateMessage message="Unable to load this chapter. Please try again." link={readerData ? `/stories/${readerData.story.id}` : "/stories"} linkLabel="Back to Story" />;

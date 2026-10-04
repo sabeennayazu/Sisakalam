@@ -9,7 +9,8 @@ export const getMediaUrl = (image: string | null): string => {
   if (image.startsWith("http")) return image;
 
   const apiUrl = new URL(API_BASE_URL);
-  const mediaPath = image.startsWith("/") ? image : `/${image}`;
+  const normalized = image.startsWith("/") ? image.slice(1) : image;
+  const mediaPath = normalized.startsWith("media/") ? `/${normalized}` : `/media/${normalized}`;
   return `${apiUrl.origin}${mediaPath}`;
 };
 

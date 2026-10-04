@@ -54,9 +54,11 @@ const startTask = ({ type, payload, operation = "publish", url, request: customR
 		return;
 	}
 
-	const request = operation === "save"
-		? type === "poem" ? savePoemDraft(payload) : saveStoryDraft(payload)
-		: customRequest ? customRequest() : type === "poem" ? createPoem(payload) : createStory(payload);
+	const request = customRequest
+		? customRequest()
+		: operation === "save"
+			? type === "poem" ? savePoemDraft(payload) : saveStoryDraft(payload)
+			: type === "poem" ? createPoem(payload) : createStory(payload);
 	void request
 		.then((result) => {
 			updateTask({ status: "success", result });

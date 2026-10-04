@@ -23,7 +23,9 @@ class Poem(models.Model):
     genre = models.ForeignKey(
         Genre,
         on_delete=models.CASCADE,
-        related_name="poems"
+        related_name="poems",
+        blank=True,
+        null=True,
     )
 
     tags = models.ManyToManyField(

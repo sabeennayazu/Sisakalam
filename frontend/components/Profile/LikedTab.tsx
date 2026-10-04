@@ -41,7 +41,7 @@ export default function LikedTab({ items, loading, error }: LikedTabProps) {
           </select>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 lg:gap-8">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] justify-items-center gap-6 md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] lg:gap-8">
         {filtered.map((item) => <UniversalCard key={`${item.type}-${item.id}`} {...item} type={item.type} showBookmark={false} />)}
       </div>
     </div>

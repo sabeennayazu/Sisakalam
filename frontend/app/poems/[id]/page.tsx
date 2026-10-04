@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { getCurrentUser } from "@/utils/account.api";
 import { getMediaUrl } from "@/utils/api";
+import { recordPoemView } from "@/utils/analytics.api";
 import { getPoem } from "@/utils/poems.api";
 import type { PoemApiRecord } from "@/types";
 import ContentComments from "@/components/Comments/ContentComments";
@@ -18,6 +19,7 @@ export default function PoemPage({ params }: PoemPageProps) {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const viewRecordedRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +50,25 @@ export default function PoemPage({ params }: PoemPageProps) {
     });
     return () => { cancelled = true; };
   }, [params]);
+
+  useEffect(() => {
+    if (!poem) return;
+    if (viewRecordedRef.current === poem.id) return;
+    if (currentUserId !== null && currentUserId === poem.author) {
+      viewRecordedRef.current = poem.id;
+      return;
+    }
+
+    viewRecordedRef.current = poem.id;
+    void recordPoemView(poem.id).then((response) => {
+      const responseData = response as { views_count?: number };
+      if (typeof responseData.views_count === "number") {
+        setPoem((current) => current ? { ...current, views: responseData.views_count ?? current.views } : current);
+      }
+    }).catch((viewError) => {
+      console.warn("Unable to record poem view.", viewError);
+    });
+  }, [currentUserId, poem]);
 
   const wordCount = useMemo(() => poem?.content.trim().split(/\s+/).filter(Boolean).length ?? 0, [poem]);
   if (loading) return <StateMessage message="Loading poem..." />;

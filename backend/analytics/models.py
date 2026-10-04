@@ -24,9 +24,46 @@ class StoryImpression(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["story", "user"],
+                name="unique_story_impression_per_user",
+                condition=models.Q(user__isnull=False),
+            )
+        ]
 
     def __str__(self):
         return f"Impression for {self.story.title}"
+
+
+class PoemImpression(models.Model):
+    poem = models.ForeignKey(
+        "poems.Poem",
+        on_delete=models.CASCADE,
+        related_name="impressions"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="poem_impressions"
+    )
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["poem", "user"],
+                name="unique_poem_impression_per_user",
+                condition=models.Q(user__isnull=False),
+            )
+        ]
+
+    def __str__(self):
+        return f"Impression for {self.poem.title}"
 
 
 class RecommendationClick(models.Model):

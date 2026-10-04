@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Max, Q
+from django.db.models import Avg, F, Max, Q, Value
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, serializers, status, viewsets
@@ -29,6 +29,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
 
 class StorySerializer(serializers.ModelSerializer):
+    synopsis = serializers.CharField(required=False, allow_blank=True)
     genre = serializers.PrimaryKeyRelatedField(queryset=Genre.objects.all(), required=False, allow_null=True)
     tags = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
     tag_names = serializers.SerializerMethodField(read_only=True)
@@ -99,18 +100,28 @@ class StorySerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         tags_data = validated_data.pop("tags", None)
-        content = validated_data.pop("content", "")
+        content = validated_data.pop("content", None)
         with transaction.atomic():
             instance = Story.objects.select_for_update().get(pk=instance.pk)
+            was_draft = instance.status == StoryStatus.DRAFT
             was_published = instance.status == StoryStatus.PUBLISHED
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
-            if instance.status == StoryStatus.PUBLISHED and not instance.chapters.exists() and not content.strip():
+            if instance.status == StoryStatus.PUBLISHED and not instance.chapters.exists() and not (content or "").strip():
                 raise serializers.ValidationError({"content": "Write the first chapter before publishing this story."})
             instance.save()
             if tags_data is not None:
                 self._sync_tags(instance, tags_data)
-            self._create_initial_chapter(instance, content)
+            if content is not None and was_draft:
+                first_chapter = instance.chapters.order_by("order").first()
+                if first_chapter:
+                    first_chapter.title = instance.title
+                    first_chapter.content = content
+                    first_chapter.save(update_fields=["title", "content", "updated_at"])
+                else:
+                    self._create_initial_chapter(instance, content)
+            elif content is not None:
+                self._create_initial_chapter(instance, content)
             if instance.status == StoryStatus.PUBLISHED and not was_published:
                 instance.publish()
         return instance
@@ -201,7 +212,24 @@ class StoryViewSet(viewsets.ModelViewSet):
         if status_filter in {StoryStatus.DRAFT, StoryStatus.PUBLISHED}:
             queryset = queryset.filter(status=status_filter)
 
-        return queryset.order_by("-published_at" if self.request.query_params.get("sort") == "latest" else "-created_at")
+        sort_key = (self.request.query_params.get("sort") or "newest").strip().lower()
+        if sort_key == "latest":
+            sort_key = "newest"
+
+        queryset = queryset.annotate(
+            popularity_score=(F("views") + (F("api_likes_count") * Value(3)) + (F("api_comments_count") * Value(2))),
+            api_average_rating=Avg("comments__rating"),
+        )
+
+        sort_map = {
+            "popular": ["-popularity_score", "-views", "-api_likes_count", "-api_comments_count", "-published_at"],
+            "most_liked": ["-api_likes_count", "-views", "-api_comments_count", "-published_at"],
+            "most_commented": ["-api_comments_count", "-views", "-api_likes_count", "-published_at"],
+            "newest": ["-published_at", "-created_at"],
+            "recently_updated": ["-updated_at", "-published_at"],
+            "highest_rated": ["-api_average_rating", "-api_comments_count", "-published_at"],
+        }
+        return queryset.order_by(*sort_map.get(sort_key, sort_map["newest"]))
 
     def get_object(self):
         queryset = annotate_content_interactions(self.queryset, "story", self.request.user)

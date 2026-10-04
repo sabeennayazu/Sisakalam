@@ -6,6 +6,54 @@ from stories.models import Genre
 
 
 class PoemCreateTests(APITestCase):
+	def test_draft_can_be_created_without_metadata_then_reloaded_and_updated(self):
+		user = get_user_model().objects.create_user(username="draft-flow-poet", email="draft-flow@example.com", password="strongpass123")
+		genre = Genre.objects.create(name="Draft Flow Poetry", type="poem")
+		self.client.force_authenticate(user=user)
+
+		created = self.client.post(reverse("poem-list"), {"title": "First title", "content": "First lines"}, format="json")
+		self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+		self.assertIsNone(created.data["genre"])
+
+		draft_url = reverse("poem-detail", args=[created.data["id"]])
+		loaded = self.client.get(draft_url)
+		self.assertEqual(loaded.status_code, status.HTTP_200_OK)
+		self.assertEqual(loaded.data["content"], "First lines")
+
+		updated = self.client.patch(draft_url, {
+			"title": "Updated title",
+			"content": "Updated lines",
+			"genre": genre.id,
+			"tags": ["edited"],
+			"is_mature": True,
+			"is_private": True,
+		}, format="json")
+		self.assertEqual(updated.status_code, status.HTTP_200_OK)
+		self.assertEqual(updated.data["title"], "Updated title")
+		self.assertEqual(updated.data["content"], "Updated lines")
+		self.assertEqual(updated.data["genre"], genre.id)
+		self.assertEqual(updated.data["tag_names"], ["edited"])
+		self.assertTrue(updated.data["is_mature"])
+		self.assertTrue(updated.data["is_private"])
+		listed = self.client.get(reverse("poem-list"), {"mine": 1, "status": "draft"})
+		self.assertIn(created.data["id"], [record["id"] for record in listed.data["results"]])
+
+		self.client.force_authenticate(user=None)
+		self.assertEqual(self.client.get(draft_url).status_code, status.HTTP_404_NOT_FOUND)
+
+	def test_only_owner_can_delete_a_poem_draft(self):
+		from poems.models import Poem
+
+		owner = get_user_model().objects.create_user(username="delete-poet", email="delete-poet@example.com", password="strongpass123")
+		other = get_user_model().objects.create_user(username="other-poet", email="other-poet@example.com", password="strongpass123")
+		poem = Poem.objects.create(title="Delete me", content="Draft", author=owner)
+		poem_url = reverse("poem-detail", args=[poem.id])
+		self.client.force_authenticate(user=other)
+		self.assertEqual(self.client.delete(poem_url).status_code, status.HTTP_404_NOT_FOUND)
+		self.client.force_authenticate(user=owner)
+		self.assertEqual(self.client.delete(poem_url).status_code, status.HTTP_204_NO_CONTENT)
+		self.assertFalse(Poem.objects.filter(pk=poem.id).exists())
+
 	def test_authenticated_user_can_publish_a_poem(self):
 		user = get_user_model().objects.create_user(
 			username="poet",
