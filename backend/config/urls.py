@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/library/', include('library.urls')),
     path('api/notifications/', include('notifications.urls')),
     path('api/analytics/', include('analytics.urls')),
+    path('api/search/', include('discovery.urls')),
 ]
 
 # This part is IMPORTANT

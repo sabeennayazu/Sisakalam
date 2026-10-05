@@ -1,9 +1,12 @@
 "use client";
 
 import { Link2, MapPin, MessageCircle, MoreVertical, Settings } from "lucide-react";
+import { LoaderCircle, Plus } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-import { followUser, unfollowUser, type Profile } from "@/utils/account.api";
+import { useRef, useState, type ChangeEvent } from "react";
+import { followUser, unfollowUser, uploadProfileImage, type Profile } from "@/utils/account.api";
+import UserAvatar from "@/components/shared/UserAvatar";
+import { announceProfileImageUpdate } from "@/utils/profile-image-events";
 
 interface ProfileHeaderProps {
   profile: Profile;
@@ -14,6 +17,9 @@ interface ProfileHeaderProps {
 export default function ProfileHeader({ profile, isOwner, onProfileChange }: ProfileHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const shareProfile = async () => {
     const url = window.location.href;
@@ -29,6 +35,35 @@ export default function ProfileHeader({ profile, isOwner, onProfileChange }: Pro
   const toggleFollow = async () => {
     const result = profile.is_following ? await unfollowUser(profile.username) : await followUser(profile.username);
     onProfileChange({ ...profile, is_following: result.is_following, followers: result.followers });
+  };
+
+  const uploadAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file || uploading) return;
+
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      setUploadError("Choose a JPG, PNG, or WEBP image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("The image must be 5 MB or smaller.");
+      return;
+    }
+
+    setUploadError("");
+    setUploading(true);
+    try {
+      const result = await uploadProfileImage(file);
+      const updatedProfile = { ...profile, profile_picture: result.profile_picture };
+      onProfileChange(updatedProfile);
+      announceProfileImageUpdate({ userId: profile.id, imageUrl: result.profile_picture });
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Unable to upload this image. Please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -49,10 +84,16 @@ export default function ProfileHeader({ profile, isOwner, onProfileChange }: Pro
             </>}
           </div>}
         </div>
-        <div className="h-28 w-28 overflow-hidden rounded-full border border-gray-200">
-          {profile.profile_picture ? <img src={profile.profile_picture} alt={`${profile.username}'s profile`} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-gray-100 text-3xl font-serif font-bold text-gray-400">{profile.username.charAt(0).toUpperCase()}</div>}
+        <div className="relative">
+          <UserAvatar userId={profile.id} username={profile.username} imageUrl={profile.profile_picture} className="h-28 w-28 border border-gray-200" imageClassName="object-cover" fallbackClassName="bg-gray-100 text-3xl font-serif text-gray-400" />
+          {uploading && <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 text-white"><LoaderCircle className="h-6 w-6 animate-spin" aria-label="Uploading profile image" /></div>}
+          {isOwner && <>
+            <button type="button" onClick={() => imageInputRef.current?.click()} disabled={uploading} aria-label="Upload profile picture" title="Upload profile picture" className="absolute bottom-[-10px] left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-white bg-black text-white transition hover:bg-gray-700 disabled:opacity-50"><Plus size={16} /></button>
+            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadAvatar(event)} className="hidden" />
+          </>}
         </div>
       </div>
+      {uploadError && <p role="alert" className="-mt-3 mb-3 max-w-sm text-xs text-red-700">{uploadError}</p>}
       <h1 className="mb-3 text-3xl font-serif font-bold text-black">{profile.username}</h1>
       {profile.bio && <p className="mb-6 max-w-xl font-serif text-lg italic leading-relaxed text-gray-600">&quot;{profile.bio}&quot;</p>}
       <div className="mb-8 flex items-center gap-6 text-xs font-semibold uppercase tracking-wider text-gray-500">

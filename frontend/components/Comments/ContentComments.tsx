@@ -5,11 +5,13 @@ import { Star, ThumbsUp, MessageCircle, MoreHorizontal, Pin } from "lucide-react
 import { createComment, deleteComment, getComments, toggleLike } from "@/utils/interactions.api";
 import { isAuthenticated } from "@/utils/auth";
 import { ApiError } from "@/utils/client";
+import UserAvatar from "@/components/shared/UserAvatar";
 
 interface CommentRecord {
   id: number;
   user: number;
   author_name: string;
+  author_picture: string | null;
   body: string;
   created_at: string;
   is_owner: boolean;
@@ -234,7 +236,7 @@ export default function ContentComments({
         return <article key={comment.id} className="relative py-5">
           <Pin size={14} className="absolute right-0 top-6 text-gray-400" />
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">{comment.author_name.slice(0, 1).toUpperCase()}</div>
+            <UserAvatar userId={comment.user} username={comment.author_name} imageUrl={comment.author_picture} className="h-8 w-8" fallbackClassName="bg-gray-200 text-xs text-gray-600" />
             <div>
               <p className="text-sm font-semibold text-gray-950">{comment.author_name}</p>
               <p className="text-[11px] text-gray-500">{new Date(comment.created_at).toLocaleDateString()}</p>
@@ -267,7 +269,7 @@ export default function ContentComments({
           {nestedReplies.length > 0 && <div className="mt-4 ml-6 space-y-3 border-l border-gray-200 pl-4">
             {nestedReplies.map((reply) => <div key={reply.id} className="rounded-lg bg-gray-50 p-3">
               <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-600">{reply.author_name.slice(0, 1).toUpperCase()}</div>
+                <UserAvatar userId={reply.user} username={reply.author_name} imageUrl={reply.author_picture} className="h-7 w-7" fallbackClassName="bg-gray-200 text-[10px] text-gray-600" />
                 <div>
                   <p className="text-xs font-semibold text-gray-900">{reply.author_name}</p>
                   <p className="text-[10px] text-gray-500">{new Date(reply.created_at).toLocaleDateString()}</p>

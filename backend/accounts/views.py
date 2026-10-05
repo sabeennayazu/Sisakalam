@@ -1,11 +1,17 @@
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework import generics, status
+from rest_framework import generics, serializers, status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
-from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer
+from .serializers import (
+    CustomTokenObtainPairSerializer,
+    ProfileImageUploadSerializer,
+    ProfileUpdateSerializer,
+    RegisterSerializer,
+)
 from .models import Follow, User
 from notifications.services import create_notification
 
@@ -47,9 +53,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class ProfileView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        user = request.user
-        return Response({
+    def serialize_profile(self, request, user):
+        return {
             "id": user.id,
             "username": user.username,
             "email": user.email,
@@ -61,7 +66,30 @@ class ProfileView(generics.RetrieveAPIView):
             "followers": user.followers_count,
             "following": user.following_count,
             "works": user.total_poems + user.total_stories,
-        })
+        }
+
+    def get(self, request):
+        return Response(self.serialize_profile(request, request.user))
+
+    def patch(self, request):
+        serializer = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(self.serialize_profile(request, user))
+
+
+class ProfileImageUploadView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    serializer_class = ProfileImageUploadSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response({
+            "profile_picture": request.build_absolute_uri(user.profile_picture.url),
+        }, status=status.HTTP_200_OK)
 
 
 class PublicProfileView(generics.RetrieveAPIView):

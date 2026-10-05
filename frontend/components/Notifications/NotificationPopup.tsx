@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Bell, Bookmark, BookOpen, Feather, Heart, MessageCircle, UserPlus } from "lucide-react";
+import UserAvatar from "@/components/shared/UserAvatar";
 import {
   getRecentNotifications,
   getUnreadCount,
@@ -74,7 +75,7 @@ export default function NotificationPopup() {
         {notifications.length ? notifications.map((notification) => (
           <Link key={notification.id} href={notification.target_url ?? "/notifications"} onClick={() => markRead(notification)} className={`flex items-center gap-3 border-b border-[#eeece8] px-4 py-3 hover:bg-[#f6f5f2] ${notification.is_read ? "bg-white" : "bg-[#fffefa]"}`}>
             <div className="relative h-9 w-9 shrink-0 border border-black/10 bg-[#f1f0ec]">
-              {notification.target_image ? <Image src={notification.target_image} alt="" width={36} height={36} unoptimized className="h-full w-full object-cover" /> : notification.actor?.avatar ? <Image src={notification.actor.avatar} alt="" width={36} height={36} unoptimized className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-[10px] font-semibold uppercase">{notification.actor?.username.slice(0, 2) ?? "S"}</span>}
+              {notification.target_image ? <Image src={notification.target_image} alt="" width={36} height={36} unoptimized className="h-full w-full object-cover" /> : notification.actor ? <UserAvatar userId={notification.actor.id} username={notification.actor.username} imageUrl={notification.actor.avatar} className="h-full w-full" fallbackClassName="text-[10px]" /> : <span className="flex h-full items-center justify-center text-[10px] font-semibold uppercase">S</span>}
               <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center border border-white bg-black text-white"><NotificationIcon type={notification.type} /></span>
             </div>
             <div className="min-w-0 flex-1">

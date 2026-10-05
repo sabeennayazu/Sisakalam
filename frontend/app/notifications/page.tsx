@@ -18,6 +18,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { apiFetch } from "@/utils/client";
+import UserAvatar from "@/components/shared/UserAvatar";
 import {
   deleteNotification,
   getNotifications,
@@ -114,10 +115,10 @@ function NotificationRow({
       <div className="relative ml-2 h-10 w-10 shrink-0 border border-black/15 bg-[#f1f0ec] sm:ml-1">
         {notification.target_image ? (
           <Image src={notification.target_image} alt="" width={40} height={40} unoptimized className="h-full w-full object-cover" />
-        ) : notification.actor?.avatar ? (
-          <Image src={notification.actor.avatar} alt="" width={40} height={40} unoptimized className="h-full w-full object-cover" />
+        ) : notification.actor ? (
+          <UserAvatar userId={notification.actor.id} username={notification.actor.username} imageUrl={notification.actor.avatar} className="h-full w-full" fallbackClassName="bg-[#f1f0ec] text-xs text-black/55" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-black/55">{notification.actor?.username.slice(0, 2) ?? "S"}</div>
+          <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase text-black/55">S</div>
         )}
         <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center border border-white bg-black text-white"><NotificationIcon type={notification.type} /></span>
       </div>

@@ -144,7 +144,7 @@ export default function ChapterReadingPage({ params }: PageProps) {
     storyId={String(story.id)}
     storyTitle={story.title}
     storyImage={getMediaUrl(story.image)}
-    storyAuthor={{ id: String(story.author), name: story.author_name ?? "Unknown author" }}
+    storyAuthor={{ id: String(story.author), name: story.author_name ?? "Unknown author", profile_image: story.author_profile_picture }}
     synopsis={story.synopsis}
     likes={story.likes}
     views={story.views}

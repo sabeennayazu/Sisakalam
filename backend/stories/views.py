@@ -45,6 +45,7 @@ class StorySerializer(serializers.ModelSerializer):
     tags = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
     tag_names = serializers.SerializerMethodField(read_only=True)
     author_name = serializers.SerializerMethodField(read_only=True)
+    author_profile_picture = serializers.SerializerMethodField(read_only=True)
     genre_name = serializers.SerializerMethodField(read_only=True)
     chapter_count = serializers.SerializerMethodField(read_only=True)
     content = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -57,7 +58,7 @@ class StorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
         fields = [
-            "id", "title", "synopsis", "author", "author_name", "genre", "genre_name",
+            "id", "title", "synopsis", "author", "author_name", "author_profile_picture", "genre", "genre_name",
             "tags", "tag_names", "image", "is_mature", "is_private", "status", "published_at",
             "content", "first_chapter_slug",
             "chapter_count", "views", "likes", "comments_count", "favorites_count", "is_liked", "is_bookmarked",
@@ -70,6 +71,12 @@ class StorySerializer(serializers.ModelSerializer):
 
     def get_author_name(self, obj):
         return obj.author.username if obj.author else None
+
+    def get_author_profile_picture(self, obj):
+        request = self.context.get("request")
+        if not obj.author or not obj.author.profile_picture:
+            return None
+        return request.build_absolute_uri(obj.author.profile_picture.url) if request else obj.author.profile_picture.url
 
     def get_genre_name(self, obj):
         return obj.genre.name if obj.genre else None

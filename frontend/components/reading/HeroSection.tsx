@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import UserAvatar from '@/components/shared/UserAvatar';
 
 interface Author {
   id: string;
@@ -39,9 +40,7 @@ export default function HeroSection({
 
       {/* Author Info */}
       <div className="mb-8 flex items-center gap-3">
-        <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-gray-200">
-          {author.profile_image ? <Image src={author.profile_image} alt={author.name} fill className="object-cover" /> : <span className="text-sm font-semibold text-gray-600">{author.name.slice(0, 1).toUpperCase()}</span>}
-        </div>
+        <UserAvatar userId={Number(author.id)} username={author.name} imageUrl={author.profile_image} className="h-10 w-10 bg-gray-200" fallbackClassName="text-sm text-gray-600" />
         <div>
           <p className="text-sm font-semibold text-gray-900">{author.name}</p>
           <p className="text-xs text-gray-500">Author</p>

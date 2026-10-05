@@ -183,6 +183,7 @@ export default function StoriesPage() {
                 title={story.title}
                 author={story.author_name ?? "Unknown author"}
                 authorId={story.author}
+                authorImage={story.author_profile_picture}
                 chapterSlug={story.first_chapter_slug}
                 genre={story.genre_name ?? ""}
                 image={getMediaUrl(story.image)}

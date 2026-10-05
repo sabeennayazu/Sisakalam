@@ -18,6 +18,9 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+SEARCH_TRIGRAM_SIMILARITY_THRESHOLD = float(os.environ.get("SEARCH_TRIGRAM_SIMILARITY_THRESHOLD", "0.30"))
+SEARCH_SQLITE_RATIO_THRESHOLD = float(os.environ.get("SEARCH_SQLITE_RATIO_THRESHOLD", "0.70"))
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -54,6 +57,7 @@ INSTALLED_APPS = [
     'notifications',
     'analytics',
     'library',
+    'discovery',
 ]
 
 MIDDLEWARE = [

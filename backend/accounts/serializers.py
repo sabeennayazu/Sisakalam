@@ -40,3 +40,28 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'email': self.user.email,
         }
         return data
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("username", "bio", "location", "website")
+
+
+class ProfileImageUploadSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.ImageField(allow_empty_file=False)
+
+    class Meta:
+        model = User
+        fields = ("profile_picture",)
+
+    def validate_profile_picture(self, image):
+        allowed_extensions = {".jpg", ".jpeg", ".png", ".webp"}
+        extension = "." + image.name.rsplit(".", 1)[-1].lower() if "." in image.name else ""
+        if extension not in allowed_extensions:
+            raise serializers.ValidationError("Use a JPG, PNG, or WEBP image.")
+        if getattr(image.image, "format", "").lower() not in {"jpeg", "png", "webp"}:
+            raise serializers.ValidationError("Use a valid JPG, PNG, or WEBP image.")
+        if image.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("The image must be 5 MB or smaller.")
+        return image

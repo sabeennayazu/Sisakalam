@@ -12,19 +12,27 @@ import {
   BookOpen,
   LayoutGrid,
   LogOut,
+  Search,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import ProfileMenu from "./ProfileMenu";
 import NotificationPopup from "@/components/Notifications/NotificationPopup";
+import SearchPopup from "@/components/search/SearchPopup";
+import UserAvatar from "@/components/shared/UserAvatar";
 import { logout, isAuthenticated } from "@/utils/auth";
 import { getUnreadCount } from "@/utils/notifications.api";
+import { getCurrentUser, type Profile } from "@/utils/account.api";
 
 export default function Navbar() {
-  const [openMenu, setOpenMenu] = useState<"profile" | "notifications" | null>(null);
+  const [openMenu, setOpenMenu] = useState<"profile" | "notifications" | "search" | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isAuth, setIsAuth] = useState<boolean | null>(null); // null = auth not checked yet
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
   const navRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   /* Check authentication on mount and listen for changes */
   useEffect(() => {
@@ -61,6 +69,33 @@ export default function Navbar() {
       window.removeEventListener("sisakalam:notifications-updated", refreshUnreadCount);
     };
   }, [isAuth]);
+
+  useEffect(() => {
+    if (!isAuth) return;
+    let active = true;
+    void getCurrentUser().then((profile) => {
+      if (active) setCurrentProfile(profile);
+    }).catch(() => undefined);
+    const handleProfileImageUpdate = (event: Event) => {
+      const { detail } = event as CustomEvent<{ userId: number; imageUrl: string }>;
+      setCurrentProfile((profile) => profile?.id === detail.userId
+        ? { ...profile, profile_picture: detail.imageUrl }
+        : profile);
+    };
+    window.addEventListener("sisakalam:profile-picture-updated", handleProfileImageUpdate);
+    return () => {
+      active = false;
+      window.removeEventListener("sisakalam:profile-picture-updated", handleProfileImageUpdate);
+    };
+  }, [isAuth]);
+
+  const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+    setOpenMenu(null);
+    router.push(`/search?q=${encodeURIComponent(query)}`);
+  };
 
   /* Close dropdown on outside click */
   useEffect(() => {
@@ -113,10 +148,21 @@ export default function Navbar() {
 
             {/* RIGHT */}
             <div className="flex items-center gap-5">
-              <input
-                placeholder="Search..."
-                className="border border-gray-500 rounded-full px-10 py-2 text-sm text-gray-500"
-              />
+              <div className="relative">
+                <form onSubmit={submitSearch} className="flex h-9 w-44 items-center gap-2 rounded-full border border-gray-300 bg-white px-3 xl:w-56">
+                  <Search size={15} className="shrink-0 text-gray-500" />
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onFocus={() => setOpenMenu("search")}
+                    onKeyDown={(event) => { if (event.key === "Escape") setOpenMenu(null); }}
+                    placeholder="Search..."
+                    aria-label="Search stories, poems, and users"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-500"
+                  />
+                </form>
+                {openMenu === "search" && <div className="absolute left-0 top-full z-50 mt-2"><SearchPopup query={searchQuery} onClose={() => setOpenMenu(null)} /></div>}
+              </div>
 
               <Link href="/write">
                 <button className="px-5 py-2 rounded-full bg-black text-white text-sm flex items-center gap-2 cursor-pointer hover:bg-white hover:text-black border border-black transition-all duration-200">
@@ -147,7 +193,7 @@ export default function Navbar() {
                 onMouseLeave={() => setOpenMenu(null)}
                 className="relative cursor-pointer"
               >
-                <User size={20} className="text-black" strokeWidth={2} />
+                {currentProfile ? <UserAvatar userId={currentProfile.id} username={currentProfile.username} imageUrl={currentProfile.profile_picture} className="h-8 w-8 border border-gray-300" fallbackClassName="bg-white text-gray-700 text-sm" /> : <User size={20} className="text-black" strokeWidth={2} />}
                 {openMenu === "profile" && <ProfileMenu />}
               </div>
             </div>
@@ -163,10 +209,21 @@ export default function Navbar() {
               Sisakalam
             </Link>
 
-            <input
-              placeholder="Search..."
-              className="flex-1 mx-4 border border-gray-500 rounded-full px-3 py-1 text-sm text-gray-500"
-            />
+            <div className="relative mx-3 min-w-0 flex-1">
+              <form onSubmit={submitSearch} className="flex h-8 items-center gap-2 rounded-full border border-gray-300 bg-white px-3">
+                <Search size={14} className="shrink-0 text-gray-500" />
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onFocus={() => setOpenMenu("search")}
+                  onKeyDown={(event) => { if (event.key === "Escape") setOpenMenu(null); }}
+                  placeholder="Search..."
+                  aria-label="Search stories, poems, and users"
+                  className="min-w-0 flex-1 bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-500"
+                />
+              </form>
+              {openMenu === "search" && <div className="absolute left-0 top-full z-50 mt-2"><SearchPopup query={searchQuery} onClose={() => setOpenMenu(null)} /></div>}
+            </div>
 
             <button onClick={() => setMobileOpen(true)}>
               <Menu size={24} className="text-black cursor-pointer" />

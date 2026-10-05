@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import LikeButton from "@/components/interactions/LikeButton";
 import BookmarkButton from "@/components/interactions/BookmarkButton";
+import UserAvatar from "@/components/shared/UserAvatar";
 import { formatTags } from "@/utils/content";
 import { startCopyLink } from "@/components/loader/UploadModal";
 
@@ -14,6 +15,7 @@ export interface UniversalCardProps {
     title: string;
     author: string;
     authorId?: number;
+    authorImage?: string | null;
     chapterSlug?: string | null;
     genre: string;
     image: string;
@@ -57,6 +59,7 @@ export default function UniversalCard({
     title,
     author,
     authorId,
+    authorImage,
     genre,
     image,
     views,
@@ -222,9 +225,10 @@ export default function UniversalCard({
                 <Link
                     href={`/profile/${encodeURIComponent(author)}`}
                     onClick={(event) => event.stopPropagation()}
-                    className="mb-3 block line-clamp-1 text-xs text-gray-500 hover:text-black md:text-sm"
+                    className="mb-3 flex min-w-0 items-center gap-1.5 text-xs text-gray-500 hover:text-black md:text-sm"
                 >
-                    {author || "Unknown Author"}
+                    {authorImage !== undefined && <UserAvatar userId={authorId} username={author || "Author"} imageUrl={authorImage} className="h-5 w-5 border border-black/10" fallbackClassName="bg-gray-200 text-gray-600 text-[9px]" />}
+                    <span className="truncate">{author || "Unknown Author"}</span>
                 </Link>
             ) : (
                 <p className="mb-3 line-clamp-1 text-xs text-gray-500 md:text-sm">{author || "Unknown Author"}</p>

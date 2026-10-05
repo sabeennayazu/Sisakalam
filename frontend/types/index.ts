@@ -34,6 +34,7 @@ export interface ContentApiRecord {
   title: string;
   author: number;
   author_name: string | null;
+  author_profile_picture: string | null;
   genre: number | null;
   genre_name: string | null;
   image: string | null;

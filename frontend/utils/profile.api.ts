@@ -10,6 +10,7 @@ export type ProfileContentType = "poem" | "story";
 export interface ProfileContent {
   id: number;
   authorId?: number;
+  authorImage: string;
   chapterSlug?: string | null;
   type: ProfileContentType;
   title: string;
@@ -35,6 +36,7 @@ interface ContentRecord {
   first_chapter_slug?: string | null;
   title: string;
   author_name: string | null;
+  author_profile_picture: string | null;
   author_id?: number;
   genre_name: string | null;
   image: string | null;
@@ -54,6 +56,7 @@ interface InteractionContentRecord {
   chapter_slug?: string | null;
   title: string;
   author_name: string | null;
+  author_profile_picture?: string | null;
   genre_name: string | null;
   image: string | null;
   views: number;
@@ -92,6 +95,7 @@ const mapContent = (item: ContentRecord, type: ProfileContentType): ProfileConte
   type,
   title: item.title,
   author: item.author_name ?? "Unknown author",
+  authorImage: absoluteImageUrl(item.author_profile_picture),
   genre: item.genre_name ?? "",
   image: absoluteImageUrl(item.image),
   views: item.views,
@@ -110,6 +114,7 @@ const mapInteractionContent = (item: InteractionContentRecord): ProfileContent =
   type: item.content_type,
   title: item.title,
   author: item.author_name ?? "Unknown author",
+  authorImage: absoluteImageUrl(item.author_profile_picture ?? null),
   genre: item.genre_name ?? "",
   image: absoluteImageUrl(item.image),
   views: item.views,

@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import { searchContent } from "./search.api";
 
 /**
  * Fetches the currently authenticated user's profile information.
@@ -55,10 +56,9 @@ export const updateProfile = async (payload: Record<string, unknown>) => {
  * @requiresAuthentication true
  */
 export const uploadProfileImage = async (file: File) => {
-  // TODO: Backend endpoint pending for profile image uploads.
   const formData = new FormData();
   formData.append("profile_picture", file);
-  return apiFetch("/accounts/me/avatar/", { method: "POST", body: formData });
+  return apiFetch<{ profile_picture: string }>("/accounts/me/avatar/", { method: "POST", body: formData });
 };
 
 /**
@@ -128,8 +128,7 @@ export const resendVerification = async () => {
  * @requiresAuthentication false
  */
 export const searchUsers = async (query: string) => {
-  // TODO: Backend endpoint pending for user search.
-  return apiFetch("/accounts/search/", { query: { q: query } });
+  return (await searchContent(query, { limit: 3 })).users;
 };
 
 /**

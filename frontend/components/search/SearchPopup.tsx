@@ -1,202 +1,101 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, BookOpen, User, Clock, ArrowRight, X } from "lucide-react";
-interface SearchResult {
-  id: number;
-  type: "story" | "poem" | "user";
-  title: string;
-  subtitle?: string;
-  author?: string;
-}
+import { ArrowRight, BookOpen, Feather, LoaderCircle, Search } from "lucide-react";
+import UserAvatar from "@/components/shared/UserAvatar";
+import { searchContent, type SearchResponse } from "@/utils/search.api";
+
 interface SearchPopupProps {
   query?: string;
   onClose?: () => void;
 }
-const results: SearchResult[] = [
-  {
-    id: 1,
-    type: "story",
-    title: "The Last Rain",
-    author: "ok",
-    subtitle: "A story about memories and things left unsaid.",
-  },
-  {
-    id: 2,
-    type: "poem",
-    title: "Letters I Never Sent",
-    author: "bk",
-    subtitle: "Poem",
-  },
-  { id: 3, type: "user", title: "Sabin Nayaju", subtitle: "@sabinnayaju" },
-  {
-    id: 4,
-    type: "story",
-    title: "The Forgotten Road",
-    author: "ck",
-    subtitle: "Chapter 7 · The Beginning",
-  },
-];
-function ResultIcon({ type }: { type: SearchResult["type"] }) {
-  if (type === "user") {
-    return <User size={16} strokeWidth={1.7} />;
-  }
-  return <BookOpen size={16} strokeWidth={1.7} />;
+
+interface SearchState {
+  query: string;
+  results?: SearchResponse;
+  error?: string;
 }
-function ResultItem({ result }: { result: SearchResult }) {
-  const href =
-    result.type === "user"
-      ? `/profile/${result.id}`
-      : result.type === "story"
-        ? `/stories/${result.id}`
-        : `/poems/${result.id}`;
-  return (
-    <Link
-      href={href}
-      className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-black/[0.035]"
-    >
-      {" "}
-      {/* Icon */}{" "}
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white">
-        {" "}
-        <ResultIcon type={result.type} />{" "}
-      </div>{" "}
-      {/* Content */}{" "}
-      <div className="min-w-0 flex-1">
-        {" "}
-        <p className="truncate text-[13px] font-medium text-black">
-          {" "}
-          {result.title}{" "}
-        </p>{" "}
-        {result.type === "user" ? (
-          <p className="mt-0.5 truncate text-[11px] text-black/40">
-            {" "}
-            {result.subtitle}{" "}
-          </p>
-        ) : (
-          <p className="mt-0.5 truncate text-[11px] text-black/40">
-            {" "}
-            {result.author && `by ${result.author}`}{" "}
-            {result.author && result.subtitle && " · "} {result.subtitle}{" "}
-          </p>
-        )}{" "}
-      </div>{" "}
-      <ArrowRight
-        size={15}
-        strokeWidth={1.6}
-        className="shrink-0 text-black/20 opacity-0 transition-opacity group-hover:opacity-100"
-      />{" "}
-    </Link>
-  );
-}
+
 export default function SearchPopup({ query = "", onClose }: SearchPopupProps) {
   const trimmedQuery = query.trim();
+  const [searchState, setSearchState] = useState<SearchState | null>(null);
+  const currentState = searchState?.query === trimmedQuery ? searchState : null;
+  const isLoading = Boolean(trimmedQuery && !currentState);
+  const results = currentState?.results;
+
+  useEffect(() => {
+    if (!trimmedQuery) return;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void searchContent(trimmedQuery, { limit: 3, signal: controller.signal })
+        .then((response) => setSearchState({ query: trimmedQuery, results: response }))
+        .catch((error: unknown) => {
+          if (!controller.signal.aborted) {
+            setSearchState({
+              query: trimmedQuery,
+              error: error instanceof Error ? error.message : "Search is unavailable right now.",
+            });
+          }
+        });
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [trimmedQuery]);
+
+  const empty = Boolean(results && results.total === 0);
+
   return (
-    <div className="w-[380px] overflow-hidden rounded-2xl border border-black/10 bg-white text-black shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
-      {" "}
-      {/* Header */}{" "}
+    <div className="w-[min(380px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-black/10 bg-white text-black shadow-[0_12px_40px_rgba(0,0,0,0.14)]" role="region" aria-label="Search suggestions">
       <div className="flex items-center gap-3 border-b border-black/10 px-4 py-3">
-        {" "}
-        <Search
-          size={17}
-          strokeWidth={1.8}
-          className="shrink-0 text-black/45"
-        />{" "}
-        <p className="min-w-0 flex-1 truncate text-[13px] text-black/60">
-          {" "}
-          {trimmedQuery || "Search Sisakalam"}{" "}
-        </p>{" "}
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 text-black/35 transition hover:bg-black/[0.05] hover:text-black"
-            aria-label="Close search"
-          >
-            {" "}
-            <X size={15} strokeWidth={1.8} />{" "}
-          </button>
-        )}{" "}
-      </div>{" "}
-      {/* Recent searches when nothing is typed */}{" "}
+        <Search size={16} strokeWidth={1.8} className="shrink-0 text-black/45" />
+        <p className="min-w-0 flex-1 truncate text-[13px] text-black/65">{trimmedQuery || "Type to search Sisakalam"}</p>
+        {onClose && <button type="button" onClick={onClose} aria-label="Close search" className="flex h-7 w-7 items-center justify-center text-black/50 hover:bg-black/5 hover:text-black">×</button>}
+      </div>
+
       {!trimmedQuery ? (
-        <div>
-          {" "}
-          <div className="flex items-center justify-between px-4 py-3">
-            {" "}
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-black/35">
-              {" "}
-              Recent searches{" "}
-            </p>{" "}
-            <button
-              type="button"
-              className="text-[11px] text-black/40 transition hover:text-black"
-            >
-              {" "}
-              Clear{" "}
-            </button>{" "}
-          </div>{" "}
-          <div className="border-t border-black/[0.07]">
-            {" "}
-            {["romance", "poetry", "Nepal", "short stories"].map((search) => (
-              <button
-                key={search}
-                type="button"
-                className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-black/[0.035]"
-              >
-                {" "}
-                <Clock
-                  size={14}
-                  strokeWidth={1.7}
-                  className="text-black/35"
-                />{" "}
-                <span className="text-[13px] text-black/70">
-                  {" "}
-                  {search}{" "}
-                </span>{" "}
-              </button>
-            ))}{" "}
-          </div>{" "}
-          <div className="border-t border-black/10 p-2">
-            {" "}
-            <Link
-              href="/search"
-              className="flex h-10 items-center justify-center rounded-xl text-[12px] font-medium text-black/55 transition hover:bg-black/[0.05] hover:text-black"
-            >
-              {" "}
-              Open search{" "}
-            </Link>{" "}
-          </div>{" "}
+        <p className="px-4 py-6 text-center text-xs text-black/45">Search stories, poems, and writers.</p>
+      ) : isLoading ? (
+        <div className="flex items-center justify-center gap-2 px-4 py-8 text-xs text-black/45" role="status"><LoaderCircle size={14} className="animate-spin" /> Searching</div>
+      ) : currentState?.error ? (
+        <p className="px-4 py-6 text-center text-xs text-black/55" role="status">{currentState.error}</p>
+      ) : empty ? (
+        <p className="px-4 py-8 text-center text-xs text-black/55">No results found</p>
+      ) : results ? (
+        <div className="max-h-[min(60vh,430px)] overflow-y-auto">
+          {results.stories.length > 0 && <section aria-label="Stories">
+            <h2 className="border-b border-black/[0.07] px-4 pb-2 pt-3 text-[9px] font-semibold uppercase text-black/45">Stories</h2>
+            {results.stories.map((item) => <Link key={item.id} href={`/stories/${item.id}`} onClick={onClose} className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/[0.035]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-black/10 bg-black/[0.025]"><BookOpen size={15} strokeWidth={1.6} /></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-medium">{item.title}</span><span className="block truncate text-[10px] text-black/45">by {item.author}</span></span>
+            </Link>)}
+          </section>}
+
+          {results.poems.length > 0 && <section aria-label="Poems">
+            <h2 className="border-b border-black/[0.07] px-4 pb-2 pt-3 text-[9px] font-semibold uppercase text-black/45">Poems</h2>
+            {results.poems.map((item) => <Link key={item.id} href={`/poems/${item.id}`} onClick={onClose} className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/[0.035]">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center border border-black/10 bg-black/[0.025]"><Feather size={15} strokeWidth={1.6} /></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-medium">{item.title}</span><span className="block truncate text-[10px] text-black/45">by {item.author}</span></span>
+            </Link>)}
+          </section>}
+
+          {results.users.length > 0 && <section aria-label="Users">
+            <h2 className="border-b border-black/[0.07] px-4 pb-2 pt-3 text-[9px] font-semibold uppercase text-black/45">Users</h2>
+            {results.users.map((item) => <Link key={item.id} href={`/profile/${encodeURIComponent(item.username)}`} onClick={onClose} className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/[0.035]">
+              <UserAvatar userId={item.id} username={item.username} imageUrl={item.profile_picture} className="h-8 w-8 border border-black/10" fallbackClassName="bg-black/[0.04] text-black/60 text-xs" />
+              <span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-medium">{item.username}</span><span className="block truncate text-[10px] text-black/45">@{item.username}</span></span>
+            </Link>)}
+          </section>}
         </div>
-      ) : (
-        /* Search results */ <div>
-          {" "}
-          {/* Stories */}{" "}
-          <div className="px-4 pb-2 pt-4">
-            {" "}
-            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-black/35">
-              {" "}
-              Results{" "}
-            </p>{" "}
-          </div>{" "}
-          <div className="border-t border-black/[0.07]">
-            {" "}
-            {results.map((result) => (
-              <ResultItem key={`${result.type}-${result.id}`} result={result} />
-            ))}{" "}
-          </div>{" "}
-          {/* Footer */}{" "}
-          <div className="border-t border-black/10 p-2">
-            {" "}
-            <Link
-              href={`/search?q=${encodeURIComponent(trimmedQuery)}`}
-              className="flex h-10 items-center justify-center gap-2 rounded-xl text-[12px] font-medium text-black/60 transition hover:bg-black/[0.05] hover:text-black"
-            >
-              {" "}
-              View all results <ArrowRight size={14} strokeWidth={1.7} />{" "}
-            </Link>{" "}
-          </div>{" "}
-        </div>
-      )}{" "}
+      ) : null}
+
+      {trimmedQuery && !isLoading && !currentState?.error && !empty && <div className="border-t border-black/10 p-1.5">
+        <Link href={`/search?q=${encodeURIComponent(trimmedQuery)}`} onClick={onClose} className="flex h-9 items-center justify-center gap-2 rounded-lg text-[11px] font-medium text-black/60 hover:bg-black/[0.05] hover:text-black">View all results <ArrowRight size={13} /></Link>
+      </div>}
     </div>
   );
 }

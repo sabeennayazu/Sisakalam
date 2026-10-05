@@ -32,6 +32,7 @@ def _content_payload(content, content_type):
         "title": content.title,
         "author_name": content.author.username if content.author else None,
         "author_id": content.author_id,
+        "author_profile_picture": content.author.profile_picture.url if content.author and content.author.profile_picture else None,
         "chapter_slug": getattr(content, "api_first_chapter_slug", None) if content_type == "story" else None,
         "genre_name": content.genre.name if content.genre else None,
         "image": content.image.url if content.image else None,
@@ -83,6 +84,7 @@ def liked_content(request):
 
 class CommentSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="user.username", read_only=True)
+    author_picture = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
     like_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
@@ -90,8 +92,14 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ["id", "user", "author_name", "is_owner", "story", "chapter", "poem", "parent", "body", "rating", "like_count", "is_liked", "created_at", "updated_at"]
-        read_only_fields = ["id", "user", "author_name", "created_at", "updated_at"]
+        fields = ["id", "user", "author_name", "author_picture", "is_owner", "story", "chapter", "poem", "parent", "body", "rating", "like_count", "is_liked", "created_at", "updated_at"]
+        read_only_fields = ["id", "user", "author_name", "author_picture", "created_at", "updated_at"]
+
+    def get_author_picture(self, obj):
+        request = self.context.get("request")
+        if not obj.user.profile_picture:
+            return None
+        return request.build_absolute_uri(obj.user.profile_picture.url) if request else obj.user.profile_picture.url
 
     def get_is_owner(self, obj):
         request = self.context.get("request")

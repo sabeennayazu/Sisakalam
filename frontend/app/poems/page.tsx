@@ -183,6 +183,7 @@ export default function PoemsPage() {
                 title={poem.title}
                 author={poem.author_name ?? "Unknown author"}
                 authorId={poem.author}
+                authorImage={poem.author_profile_picture}
                 genre={poem.genre_name ?? ""}
                 image={getMediaUrl(poem.image)}
                 views={poem.views}

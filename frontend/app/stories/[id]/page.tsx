@@ -9,6 +9,7 @@ import type { ChapterReferenceApiRecord, StoryApiRecord } from "@/types";
 import ContentComments from "@/components/Comments/ContentComments";
 import LikeButton from "@/components/interactions/LikeButton";
 import BookmarkButton from "@/components/interactions/BookmarkButton";
+import UserAvatar from "@/components/shared/UserAvatar";
 
 interface StoryPageProps { params: Promise<{ id: string }> }
 
@@ -74,7 +75,7 @@ export default function StoryPage({ params }: StoryPageProps) {
                 {story.is_mature && <span className="rounded-full bg-red-600 px-4 py-1.5 text-xs font-bold">NSFW</span>}
               </div>
               <h1 className="mb-2 text-4xl font-serif font-bold tracking-tight md:text-6xl">{story.title}</h1>
-              <p className="mb-6 text-xl italic text-gray-400">by <Link href={`/profile/${encodeURIComponent(story.author_name ?? "")}`} onClick={(event) => event.stopPropagation()} className="hover:text-white">{story.author_name ?? "Unknown author"}</Link></p>
+              <div className="mb-6 flex items-center gap-2 text-xl italic text-gray-400"><UserAvatar userId={story.author} username={story.author_name ?? "Unknown author"} imageUrl={story.author_profile_picture} className="h-8 w-8 border border-white/20" fallbackClassName="bg-gray-700 text-sm text-white" />by <Link href={`/profile/${encodeURIComponent(story.author_name ?? "")}`} onClick={(event) => event.stopPropagation()} className="hover:text-white">{story.author_name ?? "Unknown author"}</Link></div>
               <p className="mb-8 line-clamp-3 max-w-2xl leading-relaxed text-gray-300">{story.synopsis}</p>
               <div className="mb-8 flex flex-wrap gap-8 md:gap-12"><Stat label="Views" value={story.views} /><Stat label="Likes" value={story.likes} /><Stat label="Chapters" value={chapters.length} /></div>
               <div className="flex flex-wrap items-center gap-4">
