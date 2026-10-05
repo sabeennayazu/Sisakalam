@@ -13,6 +13,7 @@ from .serializers import LikeSerializer, BookmarkSerializer
 from stories.models import StoryStatus
 from poems.models import PoemStatus
 from .querysets import annotate_content_interactions
+from notifications.services import create_notification
 
 
 def _content_queryset(model, target_field, user):
@@ -166,7 +167,23 @@ def comments(request):
         return Response({"detail": "Comments are unavailable for this poem."}, status=status.HTTP_404_NOT_FOUND)
     serializer = CommentSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
-    serializer.save(user=request.user)
+    comment = serializer.save(user=request.user)
+    target = comment.chapter or comment.story or comment.poem
+    if comment.parent_id:
+        recipient = comment.parent.user
+        notification_type = "reply"
+        message = "replied to your comment"
+    else:
+        recipient = target.story.author if isinstance(target, Chapter) else target.author
+        notification_type = "comment"
+        message = "commented on your work"
+    create_notification(
+        recipient=recipient,
+        actor=request.user,
+        notification_type=notification_type,
+        message=message,
+        target=target,
+    )
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -225,13 +242,44 @@ def _set_like(user, target_type, target_id, liked):
         target = get_object_or_404(queryset.select_for_update(of=("self",)), pk=target_id)
         target_filter = {target_field: target}
         existing = Like.objects.filter(user=user, **target_filter)
+        created = False
         if liked:
-            existing.get_or_create(user=user, **target_filter)
+            _, created = existing.get_or_create(user=user, **target_filter)
         else:
             existing.delete()
         like_count = Like.objects.filter(**target_filter).count()
         is_liked = existing.exists()
+    if created:
+        _notify_like(user, target_type, target)
     return Response({"liked": is_liked, "is_liked": is_liked, "like_count": like_count, "likes_count": like_count})
+
+
+def _notify_like(actor, target_type, target):
+    if target_type == "story":
+        recipient, notification_type, message = target.author, "story_like", "liked your story"
+    elif target_type == "poem":
+        recipient, notification_type, message = target.author, "poem_like", "liked your poem"
+    elif target_type == "chapter":
+        recipient, notification_type, message = target.story.author, "chapter_like", "liked your chapter"
+    else:
+        recipient, notification_type, message = target.user, "comment_like", "liked your comment"
+    create_notification(
+        recipient=recipient,
+        actor=actor,
+        notification_type=notification_type,
+        message=message,
+        target=target,
+    )
+
+
+def _notify_bookmark(actor, target_type, target):
+    create_notification(
+        recipient=target.author,
+        actor=actor,
+        notification_type=f"{target_type}_bookmark",
+        message=f"bookmarked your {target_type}",
+        target=target,
+    )
 
 
 @api_view(["POST"])
@@ -244,12 +292,15 @@ def toggle_like(request, target_type, target_id):
         target = get_object_or_404(queryset.select_for_update(of=("self",)), pk=target_id)
         target_filter = {target_field: target}
         existing = Like.objects.filter(user=request.user, **target_filter)
+        created = False
         if existing.exists():
             existing.delete()
         else:
-            Like.objects.get_or_create(user=request.user, **target_filter)
+            _, created = Like.objects.get_or_create(user=request.user, **target_filter)
         liked = Like.objects.filter(user=request.user, **target_filter).exists()
         like_count = Like.objects.filter(**target_filter).count()
+    if created:
+        _notify_like(request.user, target_type, target)
     return Response({"liked": liked, "is_liked": liked, "like_count": like_count, "likes_count": like_count})
 
 
@@ -263,11 +314,14 @@ def toggle_bookmark(request, target_type, target_id):
         target = get_object_or_404(queryset.select_for_update(of=("self",)), pk=target_id)
         target_filter = {target_field: target}
         existing = Bookmark.objects.filter(user=request.user, **target_filter)
+        created = False
         if existing.exists():
             existing.delete()
         else:
-            Bookmark.objects.get_or_create(user=request.user, **target_filter)
+            _, created = Bookmark.objects.get_or_create(user=request.user, **target_filter)
         bookmarked = Bookmark.objects.filter(user=request.user, **target_filter).exists()
+    if created:
+        _notify_bookmark(request.user, target_type, target)
     return Response({"is_bookmarked": bookmarked})
 
 
@@ -289,6 +343,7 @@ class BookmarkViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        _notify_bookmark(request.user, "story", story)
         return Response(
             {
                 "detail": "Story bookmarked successfully",

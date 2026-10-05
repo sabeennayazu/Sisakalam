@@ -9,6 +9,17 @@ from rest_framework.response import Response
 from interactions.querysets import annotate_content_interactions
 from stories.models import Genre, Tags
 from .models import Poem, PoemStatus
+from notifications.services import notify_followers
+
+
+def _notify_poem_published(poem):
+    if not poem.is_private:
+        notify_followers(
+            author=poem.author,
+            notification_type="new_poem",
+            message="published a new poem",
+            target=poem,
+        )
 
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -77,6 +88,7 @@ class PoemSerializer(serializers.ModelSerializer):
         self._sync_tags(poem, tags_data)
         if poem.status == PoemStatus.PUBLISHED:
             poem.publish()
+            _notify_poem_published(poem)
         return poem
 
     def update(self, instance, validated_data):
@@ -92,6 +104,7 @@ class PoemSerializer(serializers.ModelSerializer):
             self._sync_tags(instance, tags_data)
         if instance.status == PoemStatus.PUBLISHED and instance.published_at is None:
             instance.publish()
+            _notify_poem_published(instance)
         return instance
 
     def _sync_tags(self, poem, tag_names):
@@ -211,6 +224,7 @@ class PoemViewSet(viewsets.ModelViewSet):
         if poem.status == PoemStatus.PUBLISHED:
             return Response({"detail": "Poem is already published."}, status=status.HTTP_400_BAD_REQUEST)
         poem.publish()
+        _notify_poem_published(poem)
         return Response(self.get_serializer(poem).data)
 
     @action(detail=True, methods=["post"], url_path="unpublish")

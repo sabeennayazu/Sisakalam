@@ -17,11 +17,13 @@ import {
 import ProfileMenu from "./ProfileMenu";
 import NotificationPopup from "@/components/Notifications/NotificationPopup";
 import { logout, isAuthenticated } from "@/utils/auth";
+import { getUnreadCount } from "@/utils/notifications.api";
 
 export default function Navbar() {
   const [openMenu, setOpenMenu] = useState<"profile" | "notifications" | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isAuth, setIsAuth] = useState<boolean | null>(null); // null = auth not checked yet
+  const [unreadCount, setUnreadCount] = useState(0);
   const navRef = useRef<HTMLDivElement>(null);
 
   /* Check authentication on mount and listen for changes */
@@ -38,6 +40,27 @@ export default function Navbar() {
       window.removeEventListener("storage", checkAuth);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isAuth) return;
+
+    let active = true;
+    const refreshUnreadCount = () => {
+      void getUnreadCount()
+        .then(({ unread_count }) => { if (active) setUnreadCount(unread_count); })
+        .catch(() => undefined);
+    };
+    refreshUnreadCount();
+    const interval = window.setInterval(refreshUnreadCount, 60_000);
+    window.addEventListener("focus", refreshUnreadCount);
+    window.addEventListener("sisakalam:notifications-updated", refreshUnreadCount);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshUnreadCount);
+      window.removeEventListener("sisakalam:notifications-updated", refreshUnreadCount);
+    };
+  }, [isAuth]);
 
   /* Close dropdown on outside click */
   useEffect(() => {
@@ -105,15 +128,12 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setOpenMenu(openMenu === "notifications" ? null : "notifications")}
-                  aria-label="Notifications"
+                  aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"}
                   aria-expanded={openMenu === "notifications"}
                   className="flex items-center text-black"
                 >
-                <Bell
-                  size={20}
-                  className="cursor-pointer"
-                  strokeWidth={2}
-                />
+                  <Bell size={20} className="cursor-pointer" strokeWidth={2} />
+                  {unreadCount > 0 && <span className="absolute -right-2 -top-2 flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold leading-none text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
                 </button>
                 {openMenu === "notifications" && (
                   <div className="absolute right-0 top-full z-50 mt-3">

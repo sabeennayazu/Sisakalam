@@ -13,6 +13,17 @@ from library.models import ReadingHistory
 from interactions.querysets import annotate_content_interactions
 from .models import Chapter, Genre, Story, StoryStatus, Tags
 from .serializers import GenreSerializer
+from notifications.services import notify_followers
+
+
+def _notify_story_published(story):
+    if not story.is_private:
+        notify_followers(
+            author=story.author,
+            notification_type="new_story",
+            message="published a new story",
+            target=story,
+        )
 
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -96,6 +107,7 @@ class StorySerializer(serializers.ModelSerializer):
             self._create_initial_chapter(story, content)
             if story.status == StoryStatus.PUBLISHED:
                 story.publish()
+                _notify_story_published(story)
         return story
 
     def update(self, instance, validated_data):
@@ -124,6 +136,7 @@ class StorySerializer(serializers.ModelSerializer):
                 self._create_initial_chapter(instance, content)
             if instance.status == StoryStatus.PUBLISHED and not was_published:
                 instance.publish()
+                _notify_story_published(instance)
         return instance
 
     def _create_initial_chapter(self, story, content):
@@ -294,6 +307,7 @@ class StoryViewSet(viewsets.ModelViewSet):
             if not story.chapters.exists():
                 return Response({"detail": "Add a first chapter before publishing this story."}, status=status.HTTP_400_BAD_REQUEST)
             story.publish()
+            _notify_story_published(story)
         return Response(self.get_serializer(story).data)
 
     @action(detail=True, methods=["post"], url_path="unpublish")
@@ -391,8 +405,15 @@ class StoryChapterListCreateAPIView(ListCreateAPIView):
             if not self.request.user.is_authenticated or story.author_id != self.request.user.id:
                 raise PermissionDenied("You can only manage your own story chapters.")
             next_number = (story.chapters.aggregate(max_number=Max("chapter_number"))["max_number"] or 0) + 1
-            serializer.save(story=story, chapter_number=next_number, order=next_number)
+            chapter = serializer.save(story=story, chapter_number=next_number, order=next_number)
             Story.objects.filter(pk=story.pk).update(chapter_count=story.chapters.count())
+            if story.status == StoryStatus.PUBLISHED and not story.is_private:
+                notify_followers(
+                    author=story.author,
+                    notification_type="new_chapter",
+                    message=f"added Chapter {chapter.chapter_number}",
+                    target=chapter,
+                )
 
 
 class StoryChapterDetailAPIView(RetrieveUpdateDestroyAPIView):

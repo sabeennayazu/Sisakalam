@@ -1,13 +1,44 @@
 import { apiFetch } from "./client";
 
+const announceUnreadCountChange = () => {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("sisakalam:notifications-updated"));
+  }
+};
+
+export interface NotificationItem {
+  id: number;
+  type: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  actor: { id: number; username: string; avatar: string | null } | null;
+  target_type: string | null;
+  target_id: number | null;
+  target_title: string | null;
+  target_url: string | null;
+  target_image: string | null;
+}
+
+export interface NotificationPage {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: NotificationItem[];
+}
+
 /**
  * Fetches the authenticated user's notifications.
  *
  * @returns A list of notifications.
  * @requiresAuthentication true
  */
-export const getNotifications = async () => {
-  return apiFetch("/notifications/");
+export const getNotifications = async (page = 1) => {
+  return apiFetch<NotificationPage>("/notifications/", { query: { page } });
+};
+
+export const getRecentNotifications = async () => {
+  return apiFetch<NotificationItem[]>("/notifications/recent/");
 };
 
 /**
@@ -17,7 +48,7 @@ export const getNotifications = async () => {
  * @requiresAuthentication true
  */
 export const getUnreadNotifications = async () => {
-  return apiFetch("/notifications/", { query: { unread: 1 } });
+  return apiFetch<NotificationPage>("/notifications/", { query: { unread: 1 } });
 };
 
 /**
@@ -27,7 +58,7 @@ export const getUnreadNotifications = async () => {
  * @requiresAuthentication true
  */
 export const getUnreadCount = async () => {
-  return apiFetch("/notifications/unread-count/");
+  return apiFetch<{ unread_count: number }>("/notifications/unread-count/");
 };
 
 /**
@@ -38,7 +69,9 @@ export const getUnreadCount = async () => {
  * @requiresAuthentication true
  */
 export const markNotificationRead = async (notificationId: string | number) => {
-  return apiFetch(`/notifications/${notificationId}/read/`, { method: "POST" });
+  const response = await apiFetch(`/notifications/${notificationId}/read/`, { method: "POST" });
+  announceUnreadCountChange();
+  return response;
 };
 
 /**
@@ -48,7 +81,9 @@ export const markNotificationRead = async (notificationId: string | number) => {
  * @requiresAuthentication true
  */
 export const markAllNotificationsRead = async () => {
-  return apiFetch("/notifications/mark-all-read/", { method: "POST" });
+  const response = await apiFetch("/notifications/mark-all-read/", { method: "POST" });
+  announceUnreadCountChange();
+  return response;
 };
 
 /**
@@ -59,7 +94,9 @@ export const markAllNotificationsRead = async () => {
  * @requiresAuthentication true
  */
 export const deleteNotification = async (notificationId: string | number) => {
-  return apiFetch(`/notifications/${notificationId}/`, { method: "DELETE" });
+  const response = await apiFetch(`/notifications/${notificationId}/`, { method: "DELETE" });
+  announceUnreadCountChange();
+  return response;
 };
 
 /**
@@ -69,8 +106,9 @@ export const deleteNotification = async (notificationId: string | number) => {
  * @requiresAuthentication true
  */
 export const clearNotifications = async () => {
-  // TODO: Backend endpoint pending for clearing all notifications.
-  return apiFetch("/notifications/clear/", { method: "POST" });
+  const response = await apiFetch("/notifications/clear/", { method: "POST" });
+  announceUnreadCountChange();
+  return response;
 };
 
 /**
@@ -80,8 +118,20 @@ export const clearNotifications = async () => {
  * @requiresAuthentication true
  */
 export const getNotificationPreferences = async () => {
-  return apiFetch("/notifications/preferences/");
+  return apiFetch<NotificationPreferences>("/notifications/preferences/");
 };
+
+export interface NotificationPreferences {
+  new_followers: boolean;
+  story_likes: boolean;
+  poem_likes: boolean;
+  story_bookmarks: boolean;
+  poem_bookmarks: boolean;
+  comments: boolean;
+  replies: boolean;
+  followed_updates: boolean;
+  email_digest_frequency: "instant" | "daily" | "weekly" | "disabled";
+}
 
 /**
  * Updates the authenticated user's notification preferences.

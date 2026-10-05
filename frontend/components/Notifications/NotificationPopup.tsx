@@ -1,208 +1,97 @@
-
 "use client";
 
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { Bell, Bookmark, BookOpen, Feather, Heart, MessageCircle, UserPlus } from "lucide-react";
 import {
-  Bell,
-  Check,
-  Heart,
-  MessageCircle,
-  BookOpen,
-  UserPlus,
-  MoreHorizontal,
-} from "lucide-react";
+  getRecentNotifications,
+  getUnreadCount,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type NotificationItem,
+} from "@/utils/notifications.api";
 
-type NotificationType =
-  | "story"
-  | "poem"
-  | "chapter"
-  | "like"
-  | "comment"
-  | "follow";
-
-interface Notification {
-  id: number;
-  type: NotificationType;
-  username: string;
-  message: string;
-  content?: string;
-  time: string;
-  read: boolean;
-  avatar?: string;
+function NotificationIcon({ type }: { type: string }) {
+  const className = "h-3.5 w-3.5";
+  if (type === "new_story" || type === "new_chapter") return <BookOpen className={className} />;
+  if (type === "new_poem") return <Feather className={className} />;
+  if (type === "story_bookmark" || type === "poem_bookmark") return <Bookmark className={className} />;
+  if (["story_like", "poem_like", "chapter_like", "comment_like"].includes(type)) return <Heart className={className} />;
+  if (type === "comment" || type === "reply") return <MessageCircle className={className} />;
+  if (type === "follow") return <UserPlus className={className} />;
+  return <Bell className={className} />;
 }
 
-const notifications: Notification[] = [
-  {
-    id: 1,
-    type: "story",
-    username: "ok",
-    message: "posted a new story",
-    content: "The Last Rain",
-    time: "5m ago",
-    read: false,
-  },
-  {
-    id: 2,
-    type: "poem",
-    username: "bk",
-    message: "posted a new poem",
-    content: "Letters I Never Sent",
-    time: "18m ago",
-    read: false,
-  },
-  {
-    id: 3,
-    type: "chapter",
-    username: "ck",
-    message: "posted a new chapter",
-    content: "Chapter 7 · The Beginning",
-    time: "1h ago",
-    read: false,
-  },
-  {
-    id: 4,
-    type: "like",
-    username: "maya",
-    message: "liked your poem",
-    content: "Rain on the Window",
-    time: "2h ago",
-    read: true,
-  },
-  {
-    id: 5,
-    type: "comment",
-    username: "arun",
-    message: "commented on your story",
-    content: "The Forgotten Road",
-    time: "4h ago",
-    read: true,
-  },
-];
-
-function NotificationIcon({ type }: { type: NotificationType }) {
-  const iconClass = "h-[15px] w-[15px]";
-
-  switch (type) {
-    case "story":
-      return <BookOpen className={iconClass} strokeWidth={1.7} />;
-
-    case "poem":
-      return <BookOpen className={iconClass} strokeWidth={1.7} />;
-
-    case "chapter":
-      return <BookOpen className={iconClass} strokeWidth={1.7} />;
-
-    case "like":
-      return <Heart className={iconClass} strokeWidth={1.7} />;
-
-    case "comment":
-      return <MessageCircle className={iconClass} strokeWidth={1.7} />;
-
-    case "follow":
-      return <UserPlus className={iconClass} strokeWidth={1.7} />;
-
-    default:
-      return <Bell className={iconClass} strokeWidth={1.7} />;
-  }
+function timeAgo(value: string) {
+  const minutes = Math.floor((Date.now() - new Date(value).getTime()) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 export default function NotificationPopup() {
-  const unreadCount = notifications.filter((item) => !item.read).length;
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([getRecentNotifications(), getUnreadCount()])
+      .then(([recent, unread]) => {
+        if (cancelled) return;
+        setNotifications(recent);
+        setUnreadCount(unread.unread_count);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
+  const markRead = (notification: NotificationItem) => {
+    if (notification.is_read) return;
+    setNotifications((items) => items.map((item) => item.id === notification.id ? { ...item, is_read: true } : item));
+    setUnreadCount((count) => Math.max(0, count - 1));
+    void markNotificationRead(notification.id).catch(() => undefined);
+  };
+
+  const markAllRead = () => {
+    setNotifications((items) => items.map((item) => ({ ...item, is_read: true })));
+    setUnreadCount(0);
+    void markAllNotificationsRead().catch(() => undefined);
+  };
 
   return (
-    <div className="w-[380px] overflow-hidden rounded-2xl border border-black/10 bg-white text-black shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-black/10 px-5 py-4">
+    <div className="w-[min(380px,calc(100vw-2rem))] overflow-hidden border border-[#e5e3de] bg-white text-black shadow-[0_12px_40px_rgba(0,0,0,0.14)]">
+      <div className="flex items-center justify-between border-b border-[#e9e7e2] px-4 py-3.5">
         <div className="flex items-center gap-2">
-          <h3 className="text-[15px] font-semibold tracking-[-0.01em]">
-            Notifications
-          </h3>
-
-          {unreadCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-black px-1.5 text-[10px] font-semibold text-white">
-              {unreadCount}
-            </span>
-          )}
+          <h3 className="font-serif text-[17px]">Notifications</h3>
+          {unreadCount > 0 && <span className="bg-black px-1.5 py-1 text-[9px] font-semibold uppercase text-white">{unreadCount} new</span>}
         </div>
-
-        <button
-          type="button"
-          className="rounded-lg p-1.5 text-black/45 transition hover:bg-black/[0.05] hover:text-black"
-          aria-label="Notification options"
-        >
-          <MoreHorizontal className="h-[18px] w-[18px]" />
-        </button>
+        <button type="button" onClick={markAllRead} disabled={!unreadCount} className="text-[9px] font-semibold uppercase text-[#65635e] hover:text-black disabled:opacity-40">Mark all read</button>
       </div>
-
-      {/* Notifications */}
       <div className="max-h-[420px] overflow-y-auto">
-        {notifications.length > 0 ? (
-          notifications.map((notification) => (
-            <Link
-              key={notification.id}
-              href="#"
-              className={`group relative flex gap-3 border-b border-black/[0.07] px-5 py-4 transition hover:bg-black/[0.025] ${
-                !notification.read ? "bg-black/[0.025]" : "bg-white"
-              }`}
-            >
-              {/* Unread indicator */}
-              {!notification.read && (
-                <span className="absolute left-2 top-[23px] h-1.5 w-1.5 rounded-full bg-black" />
-              )}
-
-              {/* Icon */}
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/10 bg-black/[0.025]">
-                <NotificationIcon type={notification.type} />
-              </div>
-
-              {/* Content */}
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] leading-5 text-black/75">
-                  <span className="font-semibold text-black">
-                    {notification.username}
-                  </span>{" "}
-                  {notification.message}
-                </p>
-
-                {notification.content && (
-                  <p className="mt-0.5 truncate text-[12px] font-medium text-black/50">
-                    {notification.content}
-                  </p>
-                )}
-
-                <p className="mt-1.5 text-[11px] text-black/35">
-                  {notification.time}
-                </p>
-              </div>
-
-              {/* Hover arrow */}
-              <div className="self-center text-black/20 opacity-0 transition group-hover:opacity-100">
-                →
-              </div>
-            </Link>
-          ))
-        ) : (
-          <div className="flex flex-col items-center justify-center px-5 py-14 text-center">
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-black/10">
-              <Bell className="h-5 w-5 text-black/40" strokeWidth={1.5} />
+        {notifications.length ? notifications.map((notification) => (
+          <Link key={notification.id} href={notification.target_url ?? "/notifications"} onClick={() => markRead(notification)} className={`flex items-center gap-3 border-b border-[#eeece8] px-4 py-3 hover:bg-[#f6f5f2] ${notification.is_read ? "bg-white" : "bg-[#fffefa]"}`}>
+            <div className="relative h-9 w-9 shrink-0 border border-black/10 bg-[#f1f0ec]">
+              {notification.target_image ? <Image src={notification.target_image} alt="" width={36} height={36} unoptimized className="h-full w-full object-cover" /> : notification.actor?.avatar ? <Image src={notification.actor.avatar} alt="" width={36} height={36} unoptimized className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-[10px] font-semibold uppercase">{notification.actor?.username.slice(0, 2) ?? "S"}</span>}
+              <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center border border-white bg-black text-white"><NotificationIcon type={notification.type} /></span>
             </div>
-
-            <p className="text-sm font-medium">No notifications</p>
-            <p className="mt-1 text-xs text-black/40">
-              You're all caught up.
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-[12px] leading-4 text-[#353430]"><span className="font-semibold text-black">{notification.actor?.username ?? "A writer"}</span> {notification.message}{notification.target_title && <span className="font-serif font-semibold text-black"> “{notification.target_title}”</span>}</p>
+              <p className="mt-1 text-[10px] uppercase text-[#85827b]">{timeAgo(notification.created_at)}</p>
+            </div>
+            {!notification.is_read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" />}
+          </Link>
+        )) : (
+          <div className="px-5 py-12 text-center">
+            <Bell className="mx-auto mb-2 h-5 w-5 text-[#77746e]" strokeWidth={1.5} />
+            <p className="font-serif text-sm">No notifications yet</p>
           </div>
         )}
       </div>
-
-      {/* Footer */}
-      <div className="border-t border-black/10 p-2">
-        <Link
-          href="/notifications"
-          className="flex h-10 items-center justify-center rounded-xl text-[13px] font-medium text-black/60 transition hover:bg-black/[0.05] hover:text-black"
-        >
-          See all notifications
-        </Link>
+      <div className="border-t border-[#e9e7e2] p-2">
+        <Link href="/notifications" className="flex h-9 items-center justify-center text-[10px] font-semibold uppercase text-[#65635e] hover:bg-[#f1f0ec] hover:text-black">See all notifications</Link>
       </div>
     </div>
   );

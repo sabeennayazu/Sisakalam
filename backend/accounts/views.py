@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer
 from .models import Follow, User
+from notifications.services import create_notification
 
 
 def get_tokens_for_user(user):
@@ -101,7 +102,15 @@ class FollowView(APIView):
 
         relation = Follow.objects.filter(follower=request.user, following=target)
         if action == "follow":
-            Follow.objects.get_or_create(follower=request.user, following=target)
+            _, created = Follow.objects.get_or_create(follower=request.user, following=target)
+            if created:
+                create_notification(
+                    recipient=target,
+                    actor=request.user,
+                    notification_type="follow",
+                    message="started following you",
+                    target=target,
+                )
         else:
             relation.delete()
 

@@ -14,8 +14,11 @@ class NotificationPreference(models.Model):
     new_followers = models.BooleanField(default=True)
     story_likes = models.BooleanField(default=True)
     poem_likes = models.BooleanField(default=True)
+    story_bookmarks = models.BooleanField(default=True)
+    poem_bookmarks = models.BooleanField(default=True)
     comments = models.BooleanField(default=True)
     replies = models.BooleanField(default=True)
+    followed_updates = models.BooleanField(default=True)
     email_digest_frequency = models.CharField(
         max_length=20,
         choices=[
