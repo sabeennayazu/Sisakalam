@@ -28,6 +28,14 @@ interface FollowResponse {
   followers: number;
 }
 
+export interface RelationshipUser {
+  id: number;
+  username: string;
+  display_name: string;
+  profile_picture: string | null;
+  is_following: boolean;
+}
+
 export const getCurrentUser = async (): Promise<Profile> => {
   return apiFetch<Profile>("/accounts/me/");
 };
@@ -172,8 +180,7 @@ export const unfollowUser = async (username: string) => {
  * @requiresAuthentication false
  */
 export const getFollowers = async (userId: string | number) => {
-  // TODO: Backend endpoint pending for follower listing.
-  return apiFetch(`/accounts/users/${userId}/followers/`);
+  return apiFetch<RelationshipUser[]>(`/accounts/users/${userId}/followers/`);
 };
 
 /**
@@ -184,6 +191,12 @@ export const getFollowers = async (userId: string | number) => {
  * @requiresAuthentication false
  */
 export const getFollowing = async (userId: string | number) => {
-  // TODO: Backend endpoint pending for following listing.
-  return apiFetch(`/accounts/users/${userId}/following/`);
+  return apiFetch<RelationshipUser[]>(`/accounts/users/${userId}/following/`);
+};
+
+export const removeFollower = async (userId: string | number, followerId: number) => {
+  return apiFetch<{ followers: number }>(`/accounts/users/${userId}/remove-follower/`, {
+    method: "POST",
+    body: { follower_id: followerId },
+  });
 };

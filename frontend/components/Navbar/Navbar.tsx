@@ -173,7 +173,11 @@ export default function Navbar() {
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setOpenMenu(openMenu === "notifications" ? null : "notifications")}
+                  onClick={() => {
+                    const opening = openMenu !== "notifications";
+                    setOpenMenu(opening ? "notifications" : null);
+                    if (opening) setUnreadCount(0);
+                  }}
                   aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications"}
                   aria-expanded={openMenu === "notifications"}
                   className="flex items-center text-black"

@@ -7,7 +7,6 @@ import { Bell, Bookmark, BookOpen, Feather, Heart, MessageCircle, UserPlus } fro
 import UserAvatar from "@/components/shared/UserAvatar";
 import {
   getRecentNotifications,
-  getUnreadCount,
   markAllNotificationsRead,
   markNotificationRead,
   type NotificationItem,
@@ -39,11 +38,18 @@ export default function NotificationPopup() {
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([getRecentNotifications(), getUnreadCount()])
-      .then(([recent, unread]) => {
+    let markedAllRead = false;
+    void getRecentNotifications()
+      .then((recent) => {
+        if (!cancelled) setNotifications(markedAllRead ? recent.map((item) => ({ ...item, is_read: true })) : recent);
+      })
+      .catch(() => undefined);
+    void markAllNotificationsRead()
+      .then(() => {
         if (cancelled) return;
-        setNotifications(recent);
-        setUnreadCount(unread.unread_count);
+        markedAllRead = true;
+        setNotifications((items) => items.map((item) => ({ ...item, is_read: true })));
+        setUnreadCount(0);
       })
       .catch(() => undefined);
     return () => { cancelled = true; };

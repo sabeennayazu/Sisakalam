@@ -12,7 +12,7 @@ from .serializers import (
     ProfileUpdateSerializer,
     RegisterSerializer,
 )
-from .models import Follow, User
+from .models import Follow, User, UserPrivacyPreference
 from notifications.services import create_notification
 
 
@@ -147,6 +147,74 @@ class FollowView(APIView):
         request.user.following_count = Follow.objects.filter(follower=request.user).count()
         request.user.save(update_fields=["following_count"])
         return Response({"is_following": action == "follow", "followers": target.followers_count})
+
+
+class RelationshipListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, user_id, relationship):
+        target = get_object_or_404(User, pk=user_id)
+        is_owner = request.user.is_authenticated and request.user.id == target.id
+        is_target_follower = request.user.is_authenticated and Follow.objects.filter(
+            follower=request.user,
+            following=target,
+        ).exists()
+
+        if target.is_private and not (is_owner or is_target_follower):
+            return Response({"detail": "You do not have permission to view this list."}, status=status.HTTP_403_FORBIDDEN)
+        if relationship == "followers" and not is_owner and UserPrivacyPreference.objects.filter(
+            user=target,
+            hide_followers_list=True,
+        ).exists():
+            return Response({"detail": "You do not have permission to view this list."}, status=status.HTTP_403_FORBIDDEN)
+
+        relation_field = "following" if relationship == "followers" else "follower"
+        user_field = "follower" if relationship == "followers" else "following"
+        relations = Follow.objects.filter(**{relation_field: target}).select_related(user_field).order_by("-created_at")
+        related_users = [getattr(relation, user_field) for relation in relations]
+        viewer_following_ids = set()
+        if request.user.is_authenticated and related_users:
+            viewer_following_ids = set(Follow.objects.filter(
+                follower=request.user,
+                following_id__in=[user.id for user in related_users],
+            ).values_list("following_id", flat=True))
+
+        return Response([
+            {
+                "id": user.id,
+                "username": user.username,
+                "display_name": user.get_full_name().strip() or user.username,
+                "profile_picture": request.build_absolute_uri(user.profile_picture.url)
+                if user.profile_picture else None,
+                "is_following": user.id in viewer_following_ids,
+            }
+            for user in related_users
+        ])
+
+
+class RemoveFollowerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        target = get_object_or_404(User, pk=user_id)
+        if request.user.id != target.id:
+            return Response({"detail": "Only the profile owner can remove a follower."}, status=status.HTTP_403_FORBIDDEN)
+
+        follower_id = request.data.get("follower_id")
+        if not follower_id:
+            return Response({"detail": "follower_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        relation = Follow.objects.filter(follower_id=follower_id, following=target)
+        if not relation.exists():
+            return Response({"detail": "This user is not a follower."}, status=status.HTTP_404_NOT_FOUND)
+        relation.delete()
+
+        target.followers_count = Follow.objects.filter(following=target).count()
+        target.save(update_fields=["followers_count"])
+        follower = get_object_or_404(User, pk=follower_id)
+        follower.following_count = Follow.objects.filter(follower=follower).count()
+        follower.save(update_fields=["following_count"])
+        return Response({"followers": target.followers_count})
 
 
 class LogoutView(APIView):

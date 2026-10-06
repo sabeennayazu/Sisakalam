@@ -6,6 +6,9 @@ interface ModalProps {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  contentClassName?: string;
+  ariaLabel?: string;
+  closeButtonClassName?: string;
 }
 
 /**
@@ -16,18 +19,27 @@ interface ModalProps {
  * - onClose: () => void - Callback function to close the modal.
  * - children: ReactNode - Content to be displayed inside the modal.
  */
-const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
-  // Prevent scrolling when modal is open
+const Modal: React.FC<ModalProps> = ({
+  open,
+  onClose,
+  children,
+  contentClassName,
+  ariaLabel,
+  closeButtonClassName,
+}) => {
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
     };
-  }, [open]);
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -35,17 +47,19 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300"
       onClick={onClose}
-      aria-modal="true"
-      role="dialog"
     >
       <div
-        className="relative w-full max-w-lg transform rounded-2xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300"
+        className={contentClassName ?? "relative w-full max-w-lg transform rounded-2xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-300"}
         onClick={(e) => e.stopPropagation()}
+        aria-label={ariaLabel}
+        aria-modal="true"
+        role="dialog"
+        tabIndex={-1}
       >
-        {/* Close Button (Optional but recommended for UX) */}
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          className={closeButtonClassName ?? "absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"}
           aria-label="Close modal"
         >
           <svg

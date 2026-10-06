@@ -84,6 +84,48 @@ class AuthEndpointTests(APITestCase):
         self.assertEqual(unfollowed.status_code, status.HTTP_200_OK)
         self.assertFalse(unfollowed.data["is_following"])
 
+    def test_relationship_lists_return_user_profiles_and_viewer_relationship(self):
+        from django.contrib.auth import get_user_model
+        from .models import Follow
+
+        viewer = get_user_model().objects.create_user(username="viewer", email="viewer@example.com", password="strongpass123")
+        target = get_user_model().objects.create_user(username="target", email="target@example.com", password="strongpass123")
+        other = get_user_model().objects.create_user(username="other", email="other@example.com", password="strongpass123", first_name="Other", last_name="Writer")
+        Follow.objects.create(follower=viewer, following=target)
+        Follow.objects.create(follower=target, following=other)
+        self.client.force_authenticate(user=viewer)
+
+        followers = self.client.get(reverse("followers-list", kwargs={"user_id": target.id}))
+        following = self.client.get(reverse("following-list", kwargs={"user_id": target.id}))
+
+        self.assertEqual(followers.status_code, status.HTTP_200_OK)
+        self.assertEqual(followers.data[0]["username"], "viewer")
+        self.assertFalse(followers.data[0]["is_following"])
+        self.assertEqual(following.status_code, status.HTTP_200_OK)
+        self.assertEqual(following.data[0]["display_name"], "Other Writer")
+        self.assertFalse(following.data[0]["is_following"])
+
+    def test_only_profile_owner_can_remove_follower_and_counts_update(self):
+        from django.contrib.auth import get_user_model
+        from .models import Follow
+
+        owner = get_user_model().objects.create_user(username="owner", email="owner@example.com", password="strongpass123")
+        follower = get_user_model().objects.create_user(username="follower", email="follower@example.com", password="strongpass123")
+        Follow.objects.create(follower=follower, following=owner)
+        owner.followers_count = 1
+        owner.save(update_fields=["followers_count"])
+
+        self.client.force_authenticate(user=follower)
+        denied = self.client.post(reverse("remove-follower", kwargs={"user_id": owner.id}), {"follower_id": follower.id}, format="json")
+        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(user=owner)
+        removed = self.client.post(reverse("remove-follower", kwargs={"user_id": owner.id}), {"follower_id": follower.id}, format="json")
+        self.assertEqual(removed.status_code, status.HTTP_200_OK)
+        self.assertEqual(removed.data["followers"], 0)
+        follower.refresh_from_db()
+        self.assertEqual(follower.following_count, 0)
+
 
 class ProfileUpdateAndImageTests(APITestCase):
     def setUp(self):
